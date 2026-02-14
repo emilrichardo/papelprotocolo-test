@@ -1,4 +1,4 @@
-const API_BASE_URL = "/api"; // Proxy handles the host
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api"; // Use env var or default to /api
 
 export async function uploadDocument(file) {
   const formData = new FormData();

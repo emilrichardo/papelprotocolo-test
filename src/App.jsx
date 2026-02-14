@@ -1,10 +1,11 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Dropzone } from "./components/Dropzone";
 import { PDFPreview } from "./components/PDFPreview";
 import { StatusIndicator } from "./components/StatusIndicator";
 import { ResultViewer } from "./components/ResultViewer";
 import { SmartViewer } from "./components/SmartViewer";
 import { RatingFeedback } from "./components/RatingFeedback";
+import { SkeletonLoader } from "./components/SkeletonLoader";
 import { Button } from "./components/ui/button";
 import { uploadDocument, pollJobStatus } from "./lib/api";
 import {
@@ -23,7 +24,6 @@ import {
   History,
 } from "lucide-react";
 import { supabase } from "./lib/supabase";
-import { cn } from "./lib/utils";
 
 function App() {
   const [file, setFile] = useState(null);
@@ -32,14 +32,12 @@ function App() {
   const [result, setResult] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [viewMode, setViewMode] = useState("smart"); // 'smart' or 'json'
-  const [isProcessing, setIsProcessing] = useState(false); // Added from the provided code edit
-  const [extractionResult, setExtractionResult] = useState(null); // Added from the provided code edit
-  const [error, setError] = useState(null); // Added from the provided code edit
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Added from the provided code edit
-  const [history, setHistory] = useState([]); // Added from the provided code edit
-
-  // Mock processing for demonstration if API is not available
-  const [useMock, setUseMock] = useState(false); // Added from the provided code edit
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [extractionResult, setExtractionResult] = useState(null);
+  const [error, setError] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [pdfPages, setPdfPages] = useState(6);
+  const [useMock] = useState(false);
 
   // Toggle Dark Mode
   useEffect(() => {
@@ -104,6 +102,40 @@ function App() {
     // Clear Local Storage for new file
     localStorage.removeItem("extractionResult");
     localStorage.removeItem("currentFileName");
+
+    // Detect page count (simple heuristic)
+    try {
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const content = e.target.result;
+
+        // 1. Try to find /Count in the Pages dictionary
+        const countMatch = content.match(/\/Count\s+(\d+)/);
+        if (countMatch && countMatch[1]) {
+          const count = parseInt(countMatch[1]);
+          if (count > 1 && count < 1000) {
+            setPdfPages(count);
+            return;
+          }
+        }
+
+        // 2. Fallback: Count /Type /Page occurrences
+        const pageMatches = content.match(/\/Type\s*\/Page\b/g);
+        if (pageMatches && pageMatches.length > 2) {
+          setPdfPages(pageMatches.length);
+          return;
+        }
+
+        // 3. Fallback based on file size if detection failed
+        if (selectedFile.size > 1024 * 1024) {
+          setPdfPages(6);
+        }
+      };
+      // Read a larger chunk (2MB)
+      reader.readAsText(selectedFile.slice(0, 2000000));
+    } catch (err) {
+      console.error("Error detecting pages:", err);
+    }
 
     fetchHistory(selectedFile.name);
   };
@@ -334,7 +366,9 @@ function App() {
         )}
 
         <div className="flex-1 min-h-0 relative">
-          {result ? (
+          {status === "processing" ? (
+            <SkeletonLoader totalPages={pdfPages} />
+          ) : result ? (
             viewMode === "smart" ? (
               <SmartViewer
                 data={result}

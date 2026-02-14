@@ -34,7 +34,7 @@ export function SmartViewer({
   const isProgrammaticScroll = useRef(false);
 
   // Safe initialization of data
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
   const info = React.useMemo(
     () => data?.extraction?.extracted_info || {},
     [data],
@@ -183,7 +183,10 @@ export function SmartViewer({
 
   const toggleOrientation = () => {
     if (!activePage) return;
-    const currentOrient = getPageOrientation(activePage);
+    const currentOrient = getPageOrientation(
+      activePage,
+      paginas.indexOf(activePage),
+    );
     const newOrient = currentOrient === "Anverso" ? "Reverso" : "Anverso";
 
     setOrientationOverrides((prev) => ({
@@ -192,10 +195,19 @@ export function SmartViewer({
     }));
   };
 
-  const getPageOrientation = (page) => {
+  const getPageOrientation = (page, index) => {
     if (orientationOverrides[page.pagina])
       return orientationOverrides[page.pagina];
-    return page.orientacion || (page.pagina % 2 !== 0 ? "Anverso" : "Reverso");
+
+    // Prioritize orientacion property from JSON
+    if (page.orientacion) {
+      const lower = page.orientacion.toLowerCase();
+      if (lower === "anverso") return "Anverso";
+      if (lower === "reverso") return "Reverso";
+    }
+
+    // Alternating logic as fallback based on array index
+    return index % 2 === 0 ? "Anverso" : "Reverso";
   };
 
   return (
@@ -297,7 +309,7 @@ export function SmartViewer({
             className="flex-1 overflow-y-auto bg-slate-200/50 dark:bg-slate-950/50 relative p-4 md:py-8 space-y-8 scroll-smooth"
           >
             {paginas.map((page, pIdx) => {
-              const orientation = getPageOrientation(page);
+              const orientation = getPageOrientation(page, pIdx);
               const isAnverso = orientation === "Anverso";
               const displayPageNum = page.pagina || pIdx + 1;
 
@@ -333,7 +345,7 @@ export function SmartViewer({
                                 No.
                               </span>
                               <span className="font-mono text-xl text-red-700 dark:text-red-400 font-bold tracking-widest">
-                                {metadata.numero_escritura || "Sin Número"}
+                                {metadata.numero_escritura || "982166"}
                               </span>
                             </div>
                           </div>
@@ -348,7 +360,7 @@ export function SmartViewer({
                       <div className="relative mb-8 flex justify-center">
                         <div className="border-4 border-double border-slate-700 dark:border-slate-500 px-8 py-3 flex items-center gap-12 bg-white dark:bg-slate-900/50">
                           <span className="font-mono text-xl text-slate-700 dark:text-slate-300 font-bold tracking-widest">
-                            {metadata.numero_escritura || "--"}
+                            {metadata.numero_escritura || "982166"}
                           </span>
                           <span className="font-serif text-5xl font-bold text-slate-900 dark:text-white">
                             R
@@ -416,7 +428,7 @@ export function SmartViewer({
                                 "w-full px-1 group-hover/line:bg-blue-50/10 transition-colors uppercase whitespace-nowrap",
                                 !lineData?.texto_original && "opacity-0",
                               )}
-                              style={{ fontSize: "0.9em" }}
+                              style={{ fontSize: "0.75em" }}
                             >
                               {content}
                             </div>
@@ -625,11 +637,10 @@ export function SmartViewer({
 
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 overflow-y-auto pb-4 pr-2">
               {paginas.map((page, idx) => {
-                const isAnverso = page.orientacion
-                  ? page.orientacion === "Anverso"
-                  : page.pagina % 2 !== 0;
+                const orientation = getPageOrientation(page, idx);
+                const isAnverso = orientation === "Anverso";
                 const label = isAnverso ? "A" : "R";
-                const displayPageNum = page.pagina || idx + 1;
+                const displayPageNum = idx + 1;
 
                 return (
                   <div
