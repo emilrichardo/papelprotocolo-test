@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Dropzone } from "./components/Dropzone";
 import { PDFPreview } from "./components/PDFPreview";
 import { StatusIndicator } from "./components/StatusIndicator";
@@ -7,7 +7,23 @@ import { SmartViewer } from "./components/SmartViewer";
 import { RatingFeedback } from "./components/RatingFeedback";
 import { Button } from "./components/ui/button";
 import { uploadDocument, pollJobStatus } from "./lib/api";
-import { RefreshCcw, Moon, Sun, Layout, Code } from "lucide-react";
+import {
+  RefreshCcw,
+  Moon,
+  Sun,
+  Layout,
+  Code,
+  Upload,
+  FileText,
+  AlertCircle,
+  CheckCircle,
+  Loader2,
+  Menu,
+  X,
+  History,
+} from "lucide-react";
+import { supabase } from "./lib/supabase";
+import { cn } from "./lib/utils";
 
 function App() {
   const [file, setFile] = useState(null);
@@ -16,6 +32,14 @@ function App() {
   const [result, setResult] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [viewMode, setViewMode] = useState("smart"); // 'smart' or 'json'
+  const [isProcessing, setIsProcessing] = useState(false); // Added from the provided code edit
+  const [extractionResult, setExtractionResult] = useState(null); // Added from the provided code edit
+  const [error, setError] = useState(null); // Added from the provided code edit
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Added from the provided code edit
+  const [history, setHistory] = useState([]); // Added from the provided code edit
+
+  // Mock processing for demonstration if API is not available
+  const [useMock, setUseMock] = useState(false); // Added from the provided code edit
 
   // Toggle Dark Mode
   useEffect(() => {
@@ -26,11 +50,62 @@ function App() {
     }
   }, [isDarkMode]);
 
+  // Auto dismiss status (from provided code edit)
+  useEffect(() => {
+    if (status === "completed" || status === "error") {
+      // Changed 'complete' to 'completed' to match original status names
+      const timer = setTimeout(() => setStatus("idle"), 5000); // Auto dismiss status
+      return () => clearTimeout(timer);
+    }
+  }, [status]);
+
+  const fetchHistory = async (fileName) => {
+    try {
+      const { data, error } = await supabase
+        .from("document_ratings")
+        .select("*")
+        .eq("pdf_name", fileName)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setHistory(data || []);
+    } catch (err) {
+      console.error("Error fetching history:", err);
+    }
+  };
+
+  // Load from Local Storage on Mount
+  useEffect(() => {
+    const savedResult = localStorage.getItem("extractionResult");
+    const savedFileName = localStorage.getItem("currentFileName");
+
+    if (savedResult && savedFileName) {
+      try {
+        setExtractionResult(JSON.parse(savedResult));
+        setResult(JSON.parse(savedResult));
+        setFile({ name: savedFileName, size: 0 }); // Mock file object for UI display
+        setStatus("completed");
+        fetchHistory(savedFileName);
+      } catch (e) {
+        console.error("Failed to load from local storage", e);
+      }
+    }
+  }, []);
+
   const handleFileSelect = async (selectedFile) => {
     setFile(selectedFile);
     setStatus("idle");
     setResult(null);
     setStatusMessage("");
+    setExtractionResult(null);
+    setError(null);
+    setHistory([]);
+
+    // Clear Local Storage for new file
+    localStorage.removeItem("extractionResult");
+    localStorage.removeItem("currentFileName");
+
+    fetchHistory(selectedFile.name);
   };
 
   const startProcessing = async () => {
@@ -38,46 +113,106 @@ function App() {
 
     setStatus("uploading");
     setStatusMessage("Subiendo archivo...");
+    setIsProcessing(true); // Added from provided code edit
+    setError(null); // Added from provided code edit
 
     try {
-      const { jobId } = await uploadDocument(file);
+      if (useMock) {
+        // Added from provided code edit
+        // Simulate API call
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        setStatus("processing");
+        setStatusMessage("Analizando con IA..."); // Added from provided code edit
+        await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      setStatus("processing");
-      setStatusMessage(
-        "Documento subido. Iniciando procesamiento OCR y extracción...",
-      );
+        // Mock data loading...
+        const mockData = {
+          default: {
+            extraction: {
+              extracted_info: {
+                paginas: [],
+                comparecientes: [],
+                comunicacional: {
+                  contenido_periodistico: { tipo_contrato: "DEMO MOCK" },
+                },
+              },
+            },
+          },
+        };
+        setExtractionResult(mockData.default);
+        setResult(mockData.default); // Keep original result state updated
 
-      // Poll
-      const interval = setInterval(async () => {
-        try {
-          const job = await pollJobStatus(jobId);
+        // Save to Local Storage
+        localStorage.setItem(
+          "extractionResult",
+          JSON.stringify(mockData.default),
+        );
+        localStorage.setItem("currentFileName", file.name);
 
-          if (job.status === "completed") {
-            clearInterval(interval);
-            setStatus("completed");
-            setStatusMessage("Procesamiento completado exitosamente.");
-            setResult(job.result);
-            setTimeout(() => {
-              setStatus("idle");
-              setStatusMessage("");
-            }, 3000);
-          } else if (job.status === "failed") {
+        setStatus("completed"); // Changed 'complete' to 'completed'
+        setStatusMessage("Procesamiento completado exitosamente."); // Added from provided code edit
+        setIsProcessing(false); // Added from provided code edit
+        fetchHistory(file.name); // Call fetchHistory after mock processing
+      } else {
+        const { jobId } = await uploadDocument(file);
+
+        setStatus("processing");
+        setStatusMessage(
+          "Documento subido. Iniciando procesamiento OCR y extracción...",
+        );
+
+        // Poll
+        const interval = setInterval(async () => {
+          try {
+            const job = await pollJobStatus(jobId);
+
+            if (job.status === "completed") {
+              clearInterval(interval);
+              setStatus("completed");
+              setStatusMessage("Procesamiento completado exitosamente.");
+              setResult(job.result);
+              setExtractionResult(job.result); // Keep extractionResult updated
+
+              // Save to Local Storage
+              localStorage.setItem(
+                "extractionResult",
+                JSON.stringify(job.result),
+              );
+              localStorage.setItem("currentFileName", file.name);
+
+              setIsProcessing(false); // Added from provided code edit
+              fetchHistory(file.name); // Call fetchHistory after successful processing
+              setTimeout(() => {
+                setStatus("idle");
+                setStatusMessage("");
+              }, 3000);
+            } else if (job.status === "failed") {
+              clearInterval(interval);
+              setStatus("error");
+              setStatusMessage(job.error || "El procesamiento falló.");
+              setError(job.error || "El procesamiento falló."); // Keep error state updated
+              setIsProcessing(false); // Added from provided code edit
+            } else {
+              // Update message if processing stage is available
+              if (job.processingStage) {
+                setStatusMessage(job.processingStage);
+              }
+            }
+          } catch (err) {
+            console.error("Polling error", err);
             clearInterval(interval);
             setStatus("error");
-            setStatusMessage(job.error || "El procesamiento falló.");
-          } else {
-            // Update message if processing stage is available
-            if (job.processingStage) {
-              setStatusMessage(job.processingStage);
-            }
+            setStatusMessage(err.message);
+            setError(err.message); // Keep error state updated
+            setIsProcessing(false); // Added from provided code edit
           }
-        } catch (err) {
-          console.error("Polling error", err);
-        }
-      }, 2000);
+        }, 2000);
+      }
     } catch (err) {
       setStatus("error");
       setStatusMessage(err.message);
+      setError(err.message); // Keep error state updated
+      setIsProcessing(false); // Added from provided code edit
     }
   };
 
@@ -86,6 +221,18 @@ function App() {
     setStatus("idle");
     setResult(null);
     setStatusMessage("");
+    setExtractionResult(null);
+    setError(null);
+    setHistory([]);
+
+    localStorage.removeItem("extractionResult");
+    localStorage.removeItem("currentFileName");
+  };
+
+  const handleSelectVersion = (versionData) => {
+    // Added from provided code edit
+    setExtractionResult(versionData.extracted_data);
+    setResult(versionData.extracted_data); // Also update the original result state
   };
 
   return (
@@ -189,7 +336,12 @@ function App() {
         <div className="flex-1 min-h-0 relative">
           {result ? (
             viewMode === "smart" ? (
-              <SmartViewer data={result} className="h-full" />
+              <SmartViewer
+                data={result}
+                history={history} // Pass history to SmartViewer
+                onSelectVersion={handleSelectVersion} // Pass handler to SmartViewer
+                className="h-full"
+              />
             ) : (
               <ResultViewer data={result} className="h-full" />
             )

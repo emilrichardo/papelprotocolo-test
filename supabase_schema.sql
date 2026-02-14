@@ -5,6 +5,7 @@ create table if not exists document_ratings (
   pdf_name text not null,
   rating integer check (rating >= 1 and rating <= 5),
   is_approved boolean default false,
+  comment text,
   extracted_data jsonb,
 
   constraint rating_range check (rating >= 1 and rating <= 5)

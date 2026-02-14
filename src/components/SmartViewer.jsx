@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Copy,
   Check,
@@ -7,41 +7,106 @@ import {
   FileText,
   User,
   Maximize2,
-  X,
   RotateCw,
+  Calendar,
+  MapPin,
+  CheckCircle,
+  AlertCircle,
+  History,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { cn } from "../lib/utils";
 
-export function SmartViewer({ data, className }) {
+export function SmartViewer({
+  data,
+  className,
+  history = [],
+  onSelectVersion,
+}) {
   const [activePage, setActivePage] = useState(null);
   const [orientationOverrides, setOrientationOverrides] = useState({});
   const [copied, setCopied] = useState(false);
 
   // Refs for scrolling
-  const pageRefs = React.useRef({});
-  const containerRef = React.useRef(null);
-  const observerRef = React.useRef(null);
-  const isProgrammaticScroll = React.useRef(false);
+  const pageRefs = useRef({});
+  const containerRef = useRef(null);
+  const observerRef = useRef(null);
+  const isProgrammaticScroll = useRef(false);
 
-  if (!data || !data.extraction || !data.extraction.extracted_info) {
-    return (
-      <div className="flex flex-col items-center justify-center p-8 text-slate-500">
-        <p>Formato de datos no reconocido para visualización inteligente.</p>
-        <pre className="mt-4 p-4 bg-slate-100 rounded text-xs overflow-auto max-w-full">
-          {JSON.stringify(data, null, 2)}
-        </pre>
-      </div>
-    );
-  }
+  // Safe initialization of data
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const info = React.useMemo(
+    () => data?.extraction?.extracted_info || {},
+    [data],
+  );
+  const paginas = React.useMemo(() => info.paginas || [], [info]);
 
-  const info = data.extraction.extracted_info;
-  const paginas = info.paginas || [];
-  const comparecientes = info.comparecientes?.comparecientes || [];
+  // Robust comparecientes extraction
+  const comparecientes =
+    info.comparecientes?.comparecientes ||
+    info.Comparecientes?.Comparecientes ||
+    info.comparecientes ||
+    info.Comparecientes ||
+    [];
+
   // Merge metadata from root info and specific subsection to ensure all fields are captured
+  // Helper to find key case-insensitively or with variations
+  const getValue = (keys) => {
+    for (const key of keys) {
+      if (info[key]) return info[key];
+      if (info.comunicacional?.contenido_periodistico?.[key])
+        return info.comunicacional.contenido_periodistico[key];
+    }
+    return null;
+  };
+
   const metadata = {
-    ...info,
-    ...info.comunicacional?.contenido_periodistico,
+    numero_escritura: getValue([
+      "numero_escritura",
+      "Numero_escritura",
+      "Escritura_No",
+      "No_escritura",
+    ]),
+    fecha_escritura: getValue([
+      "fecha_escritura",
+      "Fecha_escritura",
+      "Fecha",
+      "fecha",
+    ]),
+    lugar_escritura_publica: getValue([
+      "lugar_escritura_publica",
+      "Lugar_escritura_publica",
+      "Lugar",
+      "lugar",
+    ]),
+    estado_escritura_publica: getValue([
+      "estado_escritura_publica",
+      "Estado_escritura_publica",
+      "Estado",
+    ]),
+    nombre_de_abogado: getValue([
+      "nombre_de_abogado",
+      "Nombre_de_abogado",
+      "Nombre_notario",
+      "Notario",
+    ]),
+    vencimiento_escritura_publica: getValue([
+      "vencimiento_escritura_publica",
+      "Vencimiento_escritura_publica",
+      "Vencimiento",
+    ]),
+    ano_escritura_publica: getValue([
+      "ano_escritura_publica",
+      "Ano_escritura_publica",
+      "Ano",
+      "Agno",
+    ]),
+    tipo_contrato: getValue([
+      "descripcion_tipo_contrato",
+      "Tipo_contrato",
+      "titulo",
+    ]),
+    resumen: getValue(["resumen de dos lineas", "Resumen", "resumen"]),
   };
 
   // Scroll to active page when entering view
@@ -61,11 +126,11 @@ export function SmartViewer({ data, className }) {
         isProgrammaticScroll.current = false;
       }, 500);
     }
-  }, [activePage ? "detail-mode" : "grid-mode"]); // Trigger only on mode switch mostly
+  }, [activePage]); // Trigger only on activePage change
 
   // Intersection Observer to track active page during scroll
   useEffect(() => {
-    if (!activePage) return;
+    if (!activePage || !containerRef.current) return;
 
     const options = {
       root: containerRef.current,
@@ -96,7 +161,19 @@ export function SmartViewer({ data, className }) {
     return () => {
       if (observerRef.current) observerRef.current.disconnect();
     };
-  }, [activePage !== null, paginas]); // Re-run when entering detail mode
+  }, [activePage, paginas]);
+
+  // Check for valid data AFTER hooks are declared
+  if (!data || !data.extraction || !data.extraction.extracted_info) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 text-slate-500">
+        <p>Formato de datos no reconocido para visualización inteligente.</p>
+        <pre className="mt-4 p-4 bg-slate-100 rounded text-xs overflow-auto max-w-full">
+          {JSON.stringify(data, null, 2)}
+        </pre>
+      </div>
+    );
+  }
 
   const handleCopyHash = () => {
     navigator.clipboard.writeText(JSON.stringify(data, null, 2));
@@ -222,6 +299,7 @@ export function SmartViewer({ data, className }) {
             {paginas.map((page, pIdx) => {
               const orientation = getPageOrientation(page);
               const isAnverso = orientation === "Anverso";
+              const displayPageNum = page.pagina || pIdx + 1;
 
               return (
                 <div
@@ -233,7 +311,7 @@ export function SmartViewer({ data, className }) {
                   <div className="bg-[#fcfbf9] dark:bg-[#1a1a1a] w-full max-w-[800px] shadow-2xl relative px-8 py-12 md:px-12 md:py-16 text-slate-800 dark:text-slate-200 font-['Courier_Prime'] border border-slate-200 dark:border-slate-800/50">
                     {/* Visual Page Number Indicator (outside paper) */}
                     <div className="absolute top-4 right-[-3rem] hidden xl:block text-slate-400 font-sans text-xs -rotate-90 origin-left opacity-50">
-                      Pág. {page.pagina}
+                      Pág. {displayPageNum}
                     </div>
 
                     {/* Header */}
@@ -255,10 +333,7 @@ export function SmartViewer({ data, className }) {
                                 No.
                               </span>
                               <span className="font-mono text-xl text-red-700 dark:text-red-400 font-bold tracking-widest">
-                                {metadata.numero_escritura ||
-                                  "C " +
-                                    (Math.floor(Math.random() * 9000000) +
-                                      1000000)}
+                                {metadata.numero_escritura || "Sin Número"}
                               </span>
                             </div>
                           </div>
@@ -273,8 +348,7 @@ export function SmartViewer({ data, className }) {
                       <div className="relative mb-8 flex justify-center">
                         <div className="border-4 border-double border-slate-700 dark:border-slate-500 px-8 py-3 flex items-center gap-12 bg-white dark:bg-slate-900/50">
                           <span className="font-mono text-xl text-slate-700 dark:text-slate-300 font-bold tracking-widest">
-                            {metadata.numero_escritura ||
-                              Math.floor(Math.random() * 9000000) + 1000000}
+                            {metadata.numero_escritura || "--"}
                           </span>
                           <span className="font-serif text-5xl font-bold text-slate-900 dark:text-white">
                             R
@@ -297,7 +371,10 @@ export function SmartViewer({ data, className }) {
                           const names = comparecientes
                             .map(
                               (c) =>
-                                c.compareciente.Nombre_completo_compadeciente,
+                                c.compareciente
+                                  ?.Nombre_completo_compadeciente ||
+                                c.Nombre_completo_compadeciente ||
+                                c.Nombre,
                             )
                             .filter(Boolean);
                           if (names.length > 0) {
@@ -366,18 +443,46 @@ export function SmartViewer({ data, className }) {
         <>
           {/* Header / Metadata */}
           {metadata && (
-            <div className="space-y-2 shrink-0 bg-white dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className="space-y-2 shrink-0 bg-white dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm transition-all duration-300">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white flex-1 leading-tight">
-                  {metadata.descripcion_tipo_contrato ||
-                    metadata.titulo ||
-                    "Documento Protocolar"}
-                </h2>
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white leading-tight truncate">
+                    {metadata.tipo_contrato || "Documento Protocolar"}
+                  </h2>
+
+                  {/* Version Selector */}
+                  {history && history.length > 0 && (
+                    <div className="relative group">
+                      <select
+                        className="appearance-none bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs py-1 pl-7 pr-8 rounded-full text-slate-600 dark:text-slate-300 cursor-pointer hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                        onChange={(e) => {
+                          const selected = history.find(
+                            (h) => h.id.toString() === e.target.value,
+                          );
+                          if (selected) onSelectVersion(selected);
+                        }}
+                      >
+                        <option value="" disabled selected>
+                          Historial ({history.length})
+                        </option>
+                        {history.map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {new Date(item.created_at).toLocaleDateString()} -{" "}
+                            {item.rating || "?"}★ {item.comment ? "📝" : ""}
+                          </option>
+                        ))}
+                      </select>
+                      <History className="w-3 h-3 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <ChevronDown className="w-3 h-3 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
+                  )}
+                </div>
+
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleCopyHash}
-                  className="h-6 w-6"
+                  className="h-6 w-6 ml-2"
                 >
                   {copied ? (
                     <Check className="w-3 h-3 text-green-500" />
@@ -455,7 +560,7 @@ export function SmartViewer({ data, className }) {
               </div>
 
               <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug border-t border-slate-100 dark:border-slate-800 pt-2 mt-1">
-                {metadata["resumen de dos lineas"] || metadata.resumen}
+                {metadata.resumen}
               </p>
             </div>
           )}
@@ -469,7 +574,8 @@ export function SmartViewer({ data, className }) {
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {comparecientes.map((item, idx) => {
-                  const c = item.compareciente;
+                  // Handle both { compareciente: {...} } and direct {...} structures
+                  const c = item.compareciente || item;
                   return (
                     <div
                       key={idx}
@@ -478,23 +584,29 @@ export function SmartViewer({ data, className }) {
                       <div className="flex justify-between items-start">
                         <div>
                           <p className="font-medium text-slate-900 dark:text-slate-100">
-                            {c.Nombre_completo_compadeciente}
+                            {c.Nombre_completo_compadeciente ||
+                              c.Nombre ||
+                              c.nombre ||
+                              "Nombre desconocido"}
                           </p>
-                          {c.Rol_compadeciente && (
+                          {(c.Rol_compadeciente || c.Rol || c.rol) && (
                             <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                              {c.Rol_compadeciente}
+                              {c.Rol_compadeciente || c.Rol || c.rol}
                             </span>
                           )}
                         </div>
-                        {c.Edad_compadeciente && (
+                        {(c.Edad_compadeciente || c.Edad || c.edad) && (
                           <span className="text-xs text-slate-500">
-                            {c.Edad_compadeciente} años
+                            {c.Edad_compadeciente || c.Edad || c.edad} años
                           </span>
                         )}
                       </div>
-                      {c.Id_doc_identificacion && (
+                      {(c.Id_doc_identificacion ||
+                        c.DPI ||
+                        c.Identificacion) && (
                         <p className="mt-2 text-xs text-slate-500 break-words">
-                          {c.Tipo_doc_identificacion}: {c.Id_doc_identificacion}
+                          {c.Tipo_doc_identificacion || "ID"}:{" "}
+                          {c.Id_doc_identificacion || c.DPI || c.Identificacion}
                         </p>
                       )}
                     </div>
@@ -512,11 +624,12 @@ export function SmartViewer({ data, className }) {
             </h3>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 overflow-y-auto pb-4 pr-2">
-              {paginas.map((page) => {
+              {paginas.map((page, idx) => {
                 const isAnverso = page.orientacion
                   ? page.orientacion === "Anverso"
                   : page.pagina % 2 !== 0;
                 const label = isAnverso ? "A" : "R";
+                const displayPageNum = page.pagina || idx + 1;
 
                 return (
                   <div
@@ -538,7 +651,7 @@ export function SmartViewer({ data, className }) {
 
                     <FileText className="w-8 h-8 text-slate-300 group-hover:text-blue-500 mb-2 transition-colors" />
                     <span className="font-medium text-slate-700 dark:text-slate-300">
-                      Página {page.pagina}
+                      Página {displayPageNum}
                     </span>
                     <span className="text-xs text-slate-400 mt-1">
                       {page.lineas?.length || 0} líneas
