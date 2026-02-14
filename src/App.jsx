@@ -56,6 +56,10 @@ function App() {
             setStatus("completed");
             setStatusMessage("Procesamiento completado exitosamente.");
             setResult(job.result);
+            setTimeout(() => {
+              setStatus("idle");
+              setStatusMessage("");
+            }, 3000);
           } else if (job.status === "failed") {
             clearInterval(interval);
             setStatus("error");
