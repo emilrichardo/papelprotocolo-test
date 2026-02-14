@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Copy,
   Check,
@@ -8,13 +8,21 @@ import {
   User,
   Maximize2,
   X,
+  RotateCw,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { cn } from "../lib/utils";
 
 export function SmartViewer({ data, className }) {
   const [activePage, setActivePage] = useState(null);
+  const [orientationOverrides, setOrientationOverrides] = useState({});
   const [copied, setCopied] = useState(false);
+
+  // Refs for scrolling
+  const pageRefs = React.useRef({});
+  const containerRef = React.useRef(null);
+  const observerRef = React.useRef(null);
+  const isProgrammaticScroll = React.useRef(false);
 
   if (!data || !data.extraction || !data.extraction.extracted_info) {
     return (
@@ -36,10 +44,81 @@ export function SmartViewer({ data, className }) {
     ...info.comunicacional?.contenido_periodistico,
   };
 
+  // Scroll to active page when entering view
+  useEffect(() => {
+    if (
+      activePage &&
+      !isProgrammaticScroll.current &&
+      pageRefs.current[activePage.pagina]
+    ) {
+      isProgrammaticScroll.current = true;
+      pageRefs.current[activePage.pagina].scrollIntoView({
+        behavior: "auto",
+        block: "start",
+      });
+      // Small timeout to re-enable observer updates
+      setTimeout(() => {
+        isProgrammaticScroll.current = false;
+      }, 500);
+    }
+  }, [activePage ? "detail-mode" : "grid-mode"]); // Trigger only on mode switch mostly
+
+  // Intersection Observer to track active page during scroll
+  useEffect(() => {
+    if (!activePage) return;
+
+    const options = {
+      root: containerRef.current,
+      rootMargin: "-40% 0px -40% 0px", // Trigger when page is in middle 20% of screen
+      threshold: 0.1,
+    };
+
+    const handleIntersect = (entries) => {
+      if (isProgrammaticScroll.current) return;
+
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const pageNum = parseInt(entry.target.getAttribute("data-page"));
+          const foundPage = paginas.find((p) => p.pagina === pageNum);
+          if (foundPage && foundPage.pagina !== activePage.pagina) {
+            setActivePage(foundPage);
+          }
+        }
+      });
+    };
+
+    observerRef.current = new IntersectionObserver(handleIntersect, options);
+
+    Object.values(pageRefs.current).forEach((el) => {
+      if (el) observerRef.current.observe(el);
+    });
+
+    return () => {
+      if (observerRef.current) observerRef.current.disconnect();
+    };
+  }, [activePage !== null, paginas]); // Re-run when entering detail mode
+
   const handleCopyHash = () => {
     navigator.clipboard.writeText(JSON.stringify(data, null, 2));
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const toggleOrientation = () => {
+    if (!activePage) return;
+    const currentOrient = getPageOrientation(activePage);
+    const newOrient = currentOrient === "Anverso" ? "Reverso" : "Anverso";
+
+    setOrientationOverrides((prev) => ({
+      ...prev,
+      [activePage.pagina]: newOrient,
+    }));
+  };
+
+  const getPageOrientation = (page) => {
+    if (orientationOverrides[page.pagina])
+      return orientationOverrides[page.pagina];
+    return page.orientacion || (page.pagina % 2 !== 0 ? "Anverso" : "Reverso");
   };
 
   return (
@@ -48,7 +127,7 @@ export function SmartViewer({ data, className }) {
       {activePage ? (
         <div className="flex-1 flex flex-col min-h-0 bg-slate-100 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300">
           {/* Toolbar Header (Navigation) */}
-          <div className="flex items-center justify-between p-2 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shrink-0 z-10">
+          <div className="flex items-center justify-between p-2 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shrink-0 z-10 shadow-sm">
             <div className="flex items-center gap-4">
               <Button
                 variant="ghost"
@@ -57,6 +136,17 @@ export function SmartViewer({ data, className }) {
                 className="gap-2"
               >
                 <ChevronDown className="w-4 h-4 rotate-90" /> Volver
+              </Button>
+              <div className="h-4 w-px bg-slate-200 dark:bg-slate-800" />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleOrientation}
+                className="text-xs gap-2 text-slate-500 hover:text-blue-600"
+                title="Cambiar Orientación de la página actual"
+              >
+                <RotateCw className="w-3 h-3" />
+                {getPageOrientation(activePage)}
               </Button>
             </div>
             <div className="flex items-center gap-2">
@@ -71,7 +161,19 @@ export function SmartViewer({ data, className }) {
                   const idx = paginas.findIndex(
                     (p) => p.pagina === activePage.pagina,
                   );
-                  if (idx > 0) setActivePage(paginas[idx - 1]);
+                  if (idx > 0) {
+                    const prevPage = paginas[idx - 1];
+                    setActivePage(prevPage);
+                    // Manual scroll triggers
+                    isProgrammaticScroll.current = true;
+                    pageRefs.current[prevPage.pagina]?.scrollIntoView({
+                      block: "start",
+                      behavior: "smooth",
+                    });
+                    setTimeout(() => {
+                      isProgrammaticScroll.current = false;
+                    }, 500);
+                  }
                 }}
               >
                 <ChevronDown className="w-4 h-4 rotate-90" />
@@ -92,7 +194,19 @@ export function SmartViewer({ data, className }) {
                   const idx = paginas.findIndex(
                     (p) => p.pagina === activePage.pagina,
                   );
-                  if (idx < paginas.length - 1) setActivePage(paginas[idx + 1]);
+                  if (idx < paginas.length - 1) {
+                    const nextPage = paginas[idx + 1];
+                    setActivePage(nextPage);
+                    // Manual scroll triggers
+                    isProgrammaticScroll.current = true;
+                    pageRefs.current[nextPage.pagina]?.scrollIntoView({
+                      block: "start",
+                      behavior: "smooth",
+                    });
+                    setTimeout(() => {
+                      isProgrammaticScroll.current = false;
+                    }, 500);
+                  }
                 }}
               >
                 <ChevronRight className="w-4 h-4" />
@@ -100,134 +214,152 @@ export function SmartViewer({ data, className }) {
             </div>
           </div>
 
-          {/* Scrolled Content - Real Protocol Paper Look */}
-          <div className="flex-1 overflow-y-auto bg-slate-200/50 dark:bg-slate-950/50 flex justify-center relative p-4 md:py-8">
-            <div className="bg-[#fcfbf9] dark:bg-[#1a1a1a] w-full max-w-[800px] shadow-2xl min-h-[1000px] relative px-8 py-12 md:px-12 md:py-16 text-slate-800 dark:text-slate-200 font-['Courier_Prime']">
-              {/* Protocol Header based on Orientation */}
-              {activePage.orientacion === "Anverso" ||
-              (!activePage.orientacion && activePage.pagina % 2 !== 0) ? (
-                // ANVERSO HEADER
-                <div className="relative mb-12">
-                  {/* Top Layout */}
-                  <div className="flex justify-between items-start mb-6">
-                    {/* Shield Placeholder - Left */}
-                    <div className="w-24 h-24 rounded-full border-4 border-double border-red-800/20 dark:border-red-500/20 flex items-center justify-center opacity-50">
-                      <div className="text-[10px] text-center font-serif text-red-900/40 dark:text-red-500/40 font-bold leading-tight">
-                        REPUBLICA
-                        <br />
-                        DE
-                        <br />
-                        GUATEMALA
-                      </div>
+          {/* Scrolled Content - Continuous Vertical List */}
+          <div
+            ref={containerRef}
+            className="flex-1 overflow-y-auto bg-slate-200/50 dark:bg-slate-950/50 relative p-4 md:py-8 space-y-8 scroll-smooth"
+          >
+            {paginas.map((page, pIdx) => {
+              const orientation = getPageOrientation(page);
+              const isAnverso = orientation === "Anverso";
+
+              return (
+                <div
+                  key={pIdx}
+                  data-page={page.pagina}
+                  ref={(el) => (pageRefs.current[page.pagina] = el)}
+                  className="flex justify-center min-h-[1000px]"
+                >
+                  <div className="bg-[#fcfbf9] dark:bg-[#1a1a1a] w-full max-w-[800px] shadow-2xl relative px-8 py-12 md:px-12 md:py-16 text-slate-800 dark:text-slate-200 font-['Courier_Prime'] border border-slate-200 dark:border-slate-800/50">
+                    {/* Visual Page Number Indicator (outside paper) */}
+                    <div className="absolute top-4 right-[-3rem] hidden xl:block text-slate-400 font-sans text-xs -rotate-90 origin-left opacity-50">
+                      Pág. {page.pagina}
                     </div>
 
-                    {/* Number Box - Center/Right */}
-                    <div className="flex flex-col items-end">
-                      <div className="border-2 border-slate-800 dark:border-slate-500 px-4 py-2 min-w-[200px] flex justify-between items-center bg-white dark:bg-slate-900/50 mb-2">
-                        <span className="font-serif text-2xl font-bold">
-                          No.
-                        </span>
-                        <span className="font-mono text-xl text-red-700 dark:text-red-400 font-bold tracking-widest">
-                          {/* Mock Folio or extracted metadata if available */}C
-                          5818934
-                        </span>
+                    {/* Header */}
+                    {isAnverso ? (
+                      <div className="relative mb-12">
+                        <div className="flex justify-between items-start mb-6">
+                          <div className="w-24 h-24 rounded-full border-4 border-double border-red-800/20 dark:border-red-500/20 flex items-center justify-center opacity-50">
+                            <div className="text-[10px] text-center font-serif text-red-900/40 dark:text-red-500/40 font-bold leading-tight">
+                              REPUBLICA
+                              <br />
+                              DE
+                              <br />
+                              GUATEMALA
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end">
+                            <div className="border-2 border-slate-800 dark:border-slate-500 px-4 py-2 min-w-[200px] flex justify-between items-center bg-white dark:bg-slate-900/50 mb-2">
+                              <span className="font-serif text-2xl font-bold">
+                                No.
+                              </span>
+                              <span className="font-mono text-xl text-red-700 dark:text-red-400 font-bold tracking-widest">
+                                {metadata.numero_escritura ||
+                                  "C " +
+                                    (Math.floor(Math.random() * 9000000) +
+                                      1000000)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-center">
+                          <h1 className="text-4xl font-serif font-bold text-red-700 dark:text-red-500 tracking-[0.2em] opacity-90 scale-y-110">
+                            PROTOCOLO
+                          </h1>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <h1 className="text-4xl font-serif font-bold text-red-700 dark:text-red-500 tracking-[0.2em] opacity-90 scale-y-110">
-                      PROTOCOLO
-                    </h1>
-                  </div>
-                </div>
-              ) : (
-                // REVERSO HEADER
-                <div className="relative mb-8 flex justify-center">
-                  <div className="border-4 border-double border-slate-700 dark:border-slate-500 px-8 py-3 flex items-center gap-12 bg-white dark:bg-slate-900/50">
-                    <span className="font-mono text-xl text-slate-700 dark:text-slate-300 font-bold tracking-widest">
-                      5818934
-                    </span>
-                    <span className="font-serif text-5xl font-bold text-slate-900 dark:text-white">
-                      R
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Margins visual guide */}
-              <div className="absolute top-0 bottom-0 left-[3.5rem] w-px bg-red-500/20 pointer-events-none" />
-              <div className="absolute top-0 bottom-0 right-[2rem] w-px bg-red-500/20 pointer-events-none" />
-
-              {/* Line Content */}
-              <div className="relative z-0 leading-[2.6rem] tracking-tighter text-justify">
-                {Array.from({ length: 25 }).map((_, idx) => {
-                  const lineData = activePage.lineas && activePage.lineas[idx];
-
-                  // Highlighting Logic
-                  let content = lineData?.texto_original;
-                  if (content && comparecientes.length > 0) {
-                    // create a regex for all names
-                    const names = comparecientes
-                      .map((c) => c.compareciente.Nombre_completo_compadeciente)
-                      .filter(Boolean);
-                    if (names.length > 0) {
-                      // Escape special characters in names for regex
-                      const escapedNames = names.map((name) =>
-                        name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
-                      );
-                      const pattern = new RegExp(
-                        `(${escapedNames.join("|")})`,
-                        "gi",
-                      );
-                      const parts = content.split(pattern);
-                      content = parts.map((part, i) =>
-                        names.some(
-                          (n) => n.toLowerCase() === part.toLowerCase(),
-                        ) ? (
-                          <span
-                            key={i}
-                            className="font-bold bg-yellow-200/50 dark:bg-yellow-900/50 px-1 rounded-sm text-slate-900 dark:text-yellow-100 border-b-2 border-slate-900 dark:border-yellow-200/50"
-                          >
-                            {part}
+                    ) : (
+                      <div className="relative mb-8 flex justify-center">
+                        <div className="border-4 border-double border-slate-700 dark:border-slate-500 px-8 py-3 flex items-center gap-12 bg-white dark:bg-slate-900/50">
+                          <span className="font-mono text-xl text-slate-700 dark:text-slate-300 font-bold tracking-widest">
+                            {metadata.numero_escritura ||
+                              Math.floor(Math.random() * 9000000) + 1000000}
                           </span>
-                        ) : (
-                          part
-                        ),
-                      );
-                    }
-                  }
+                          <span className="font-serif text-5xl font-bold text-slate-900 dark:text-white">
+                            R
+                          </span>
+                        </div>
+                      </div>
+                    )}
 
-                  return (
-                    <div
-                      key={idx}
-                      className="relative border-b border-cyan-200/50 dark:border-cyan-800/30 flex items-baseline h-[2.6rem] w-full group/line"
-                    >
-                      <span className="absolute left-[-2.5rem] w-8 text-sm text-slate-400 dark:text-slate-600 font-sans select-none text-right flex items-center justify-end h-full pr-2">
-                        {idx + 1}
-                      </span>
-                      <div
-                        className={cn(
-                          "w-full px-1 group-hover/line:bg-blue-50/10 transition-colors uppercase whitespace-nowrap",
-                          !lineData?.texto_original && "opacity-0",
-                        )}
-                        style={{ fontSize: "0.9em" }}
-                      >
-                        {content}
+                    {/* Margins */}
+                    <div className="absolute top-0 bottom-0 left-[3.5rem] w-px bg-red-500/20 pointer-events-none" />
+                    <div className="absolute top-0 bottom-0 right-[2rem] w-px bg-red-500/20 pointer-events-none" />
+
+                    {/* Lines */}
+                    <div className="relative z-0 leading-[2.6rem] tracking-tighter text-justify">
+                      {Array.from({ length: 25 }).map((_, idx) => {
+                        const lineData = page.lineas && page.lineas[idx];
+
+                        let content = lineData?.texto_original;
+                        if (content && comparecientes.length > 0) {
+                          const names = comparecientes
+                            .map(
+                              (c) =>
+                                c.compareciente.Nombre_completo_compadeciente,
+                            )
+                            .filter(Boolean);
+                          if (names.length > 0) {
+                            const escapedNames = names.map((name) =>
+                              name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+                            );
+                            const pattern = new RegExp(
+                              `(${escapedNames.join("|")})`,
+                              "gi",
+                            );
+                            const parts = content.split(pattern);
+                            content = parts.map((part, i) =>
+                              names.some(
+                                (n) => n.toLowerCase() === part.toLowerCase(),
+                              ) ? (
+                                <span
+                                  key={i}
+                                  className="font-bold bg-yellow-200/50 dark:bg-yellow-900/50 px-1 rounded-sm text-slate-900 dark:text-yellow-100 border-b-2 border-slate-900 dark:border-yellow-200/50"
+                                >
+                                  {part}
+                                </span>
+                              ) : (
+                                part
+                              ),
+                            );
+                          }
+                        }
+
+                        return (
+                          <div
+                            key={idx}
+                            className="relative border-b border-cyan-200/50 dark:border-cyan-800/30 flex items-baseline h-[2.6rem] w-full group/line"
+                          >
+                            <span className="absolute left-[-2.5rem] w-8 text-sm text-slate-400 dark:text-slate-600 font-sans select-none text-right flex items-center justify-end h-full pr-2">
+                              {isAnverso ? idx + 1 : idx + 26}
+                            </span>
+                            <div
+                              className={cn(
+                                "w-full px-1 group-hover/line:bg-blue-50/10 transition-colors uppercase whitespace-nowrap",
+                                !lineData?.texto_original && "opacity-0",
+                              )}
+                              style={{ fontSize: "0.9em" }}
+                            >
+                              {content}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Footer Stamp */}
+                    <div className="mt-12 flex justify-center opacity-80 rotate-[-2deg] pointer-events-none select-none">
+                      <div className="border-4 border-blue-800 dark:border-blue-400 rounded-full px-6 py-2 inline-block">
+                        <div className="text-blue-800 dark:text-blue-400 font-bold font-serif text-lg uppercase tracking-widest">
+                          FIRMADO
+                        </div>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-
-              {/* Stamp signature simulation */}
-              <div className="mt-12 flex justify-center opacity-80 rotate-[-2deg] pointer-events-none select-none">
-                <div className="border-4 border-blue-800 dark:border-blue-400 rounded-full px-6 py-2 inline-block">
-                  <div className="text-blue-800 dark:text-blue-400 font-bold font-serif text-lg uppercase tracking-widest">
-                    FIRMADO
                   </div>
                 </div>
-              </div>
-            </div>
+              );
+            })}
           </div>
         </div>
       ) : (

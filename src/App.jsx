@@ -4,6 +4,7 @@ import { PDFPreview } from "./components/PDFPreview";
 import { StatusIndicator } from "./components/StatusIndicator";
 import { ResultViewer } from "./components/ResultViewer";
 import { SmartViewer } from "./components/SmartViewer";
+import { RatingFeedback } from "./components/RatingFeedback";
 import { Button } from "./components/ui/button";
 import { uploadDocument, pollJobStatus } from "./lib/api";
 import { RefreshCcw, Moon, Sun, Layout, Code } from "lucide-react";
@@ -147,12 +148,9 @@ function App() {
 
       {/* Right Panel: Status & Results */}
       <div className="w-1/2 flex flex-col p-6 bg-white dark:bg-slate-900/50">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-2 flex items-center justify-between shrink-0">
           <div>
-            <h2 className="text-xl font-semibold mb-2">Resultados</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Aquí verás el estado del proceso y la información extraída.
-            </p>
+            <h2 className="text-lg font-semibold">Resultados</h2>
           </div>
           {result && (
             <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
@@ -176,6 +174,16 @@ function App() {
 
         {status !== "idle" && (
           <StatusIndicator status={status} message={statusMessage} />
+        )}
+
+        {/* Rating System */}
+        {result && (
+          <div className="mb-4">
+            <RatingFeedback
+              fileName={file?.name || "documento_desconocido.pdf"}
+              extractedData={result}
+            />
+          </div>
         )}
 
         <div className="flex-1 min-h-0 relative">
