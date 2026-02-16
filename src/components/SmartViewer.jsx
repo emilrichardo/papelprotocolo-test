@@ -35,25 +35,57 @@ export function SmartViewer({
 
   // Safe initialization of data
 
-  const info = React.useMemo(
-    () => data?.extraction?.extracted_info || {},
-    [data],
+  const info = React.useMemo(() => {
+    if (!data) return {};
+    // Support new format: data might be the result object (passed from App.js)
+    const extraction =
+      data.extraction || data.result?.extraction || data.result?.raw_extraction;
+    if (extraction) {
+      return extraction.extracted_info || extraction;
+    }
+    return data || {};
+  }, [data]);
+
+  const paginas = React.useMemo(
+    () =>
+      info.paginas_extaidas ||
+      info.paginas_extraidas ||
+      info.paginas_escritura ||
+      info.paginas ||
+      info.paginas_escaneadas ||
+      [],
+    [info],
   );
-  const paginas = React.useMemo(() => info.paginas || [], [info]);
 
   // Robust comparecientes extraction
-  const comparecientes =
-    info.comparecientes?.comparecientes ||
-    info.Comparecientes?.Comparecientes ||
-    info.comparecientes ||
-    info.Comparecientes ||
-    [];
+  const comparecientes = React.useMemo(() => {
+    const raw =
+      info.comparecientes?.comparecientes ||
+      info.Comparecientes?.Comparecientes ||
+      info.comparecientes ||
+      info.Comparecientes ||
+      [];
+    return Array.isArray(raw) ? raw : [];
+  }, [info]);
 
   // Merge metadata from root info and specific subsection to ensure all fields are captured
   // Helper to find key case-insensitively or with variations
+  // Helper to find key case-insensitively or with variations
   const getValue = (keys) => {
+    // 1. Check root info
     for (const key of keys) {
       if (info[key]) return info[key];
+    }
+
+    // 2. Check documento_metadata
+    if (info.documento_metadata) {
+      for (const key of keys) {
+        if (info.documento_metadata[key]) return info.documento_metadata[key];
+      }
+    }
+
+    // 3. Last resort: comunicacional
+    for (const key of keys) {
       if (info.comunicacional?.contenido_periodistico?.[key])
         return info.comunicacional.contenido_periodistico[key];
     }
@@ -164,7 +196,19 @@ export function SmartViewer({
   }, [activePage, paginas]);
 
   // Check for valid data AFTER hooks are declared
-  if (!data || !data.extraction || !data.extraction.extracted_info) {
+  const hasValidData =
+    data &&
+    ((data.extraction &&
+      (data.extraction.extracted_info ||
+        data.extraction.paginas_escritura ||
+        data.extraction.paginas_extaidas ||
+        data.extraction.paginas_extraidas ||
+        data.extraction.paginas)) ||
+      data.result?.extraction ||
+      data.paginas_escritura ||
+      data.paginas);
+
+  if (!hasValidData) {
     return (
       <div className="flex flex-col items-center justify-center p-8 text-slate-500">
         <p>Formato de datos no reconocido para visualización inteligente.</p>
@@ -202,7 +246,8 @@ export function SmartViewer({
     // Prioritize orientacion property from JSON
     if (page.orientacion) {
       const lower = page.orientacion.toLowerCase();
-      if (lower === "anverso") return "Anverso";
+      if (lower === "anverso" || lower === "amberso" || lower === "ambverso")
+        return "Anverso";
       if (lower === "reverso") return "Reverso";
     }
 
@@ -375,66 +420,127 @@ export function SmartViewer({
 
                     {/* Lines */}
                     <div className="relative z-0 leading-[2.6rem] tracking-tighter text-justify">
-                      {Array.from({ length: 25 }).map((_, idx) => {
-                        const lineData = page.lineas && page.lineas[idx];
+                      {(() => {
+                        // Prepare 25 slots
+                        const slots = Array.from({ length: 25 }, () => null);
+                        const renglones =
+                          page.renglones ||
+                          page.lineas ||
+                          page.cuerpo?.lineas ||
+                          [];
 
-                        let content = lineData?.texto_original;
-                        if (content && comparecientes.length > 0) {
-                          const names = comparecientes
-                            .map(
-                              (c) =>
-                                c.compareciente
-                                  ?.Nombre_completo_compadeciente ||
-                                c.Nombre_completo_compadeciente ||
-                                c.Nombre,
-                            )
-                            .filter(Boolean);
-                          if (names.length > 0) {
-                            const escapedNames = names.map((name) =>
-                              name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
-                            );
-                            const pattern = new RegExp(
-                              `(${escapedNames.join("|")})`,
-                              "gi",
-                            );
-                            const parts = content.split(pattern);
-                            content = parts.map((part, i) =>
-                              names.some(
-                                (n) => n.toLowerCase() === part.toLowerCase(),
-                              ) ? (
-                                <span
-                                  key={i}
-                                  className="font-bold bg-yellow-200/50 dark:bg-yellow-900/50 px-1 rounded-sm text-slate-900 dark:text-yellow-100 border-b-2 border-slate-900 dark:border-yellow-200/50"
-                                >
-                                  {part}
-                                </span>
-                              ) : (
-                                part
-                              ),
-                            );
+                        let nextAvailableSlot = 0;
+                        renglones.forEach((r) => {
+                          let slotIndex = -1;
+                          const indicator =
+                            r.indicador_renglon || r.numero_linea;
+
+                          if (indicator) {
+                            const L = parseInt(indicator);
+                            if (!isNaN(L)) {
+                              // Standard protocol paper has 25 lines per side.
+                              // indicator 1-25 -> slot 0-24
+                              // indicator 26-50 -> slot 0-24 (reverso)
+                              // Generalizing: (L - 1) % 25
+                              slotIndex = (L - 1) % 25;
+                            }
                           }
-                        }
 
-                        return (
-                          <div
-                            key={idx}
-                            className="relative border-b border-cyan-200/50 dark:border-cyan-800/30 flex items-baseline h-[2.6rem] w-full group/line"
-                          >
-                            <span className="absolute left-[-2.5rem] w-8 text-sm text-slate-400 dark:text-slate-600 font-sans select-none text-right flex items-center justify-end h-full pr-2">
-                              {isAnverso ? idx + 1 : idx + 26}
-                            </span>
+                          if (
+                            slotIndex !== -1 &&
+                            slotIndex >= 0 &&
+                            slotIndex < 25
+                          ) {
+                            slots[slotIndex] = r;
+                            // Update nextAvailableSlot to follow this one
+                            nextAvailableSlot = slotIndex + 1;
+                          } else {
+                            // No indicator or invalid, put in next available slot
+                            if (nextAvailableSlot < 25) {
+                              // Only fill if slot is empty, otherwise find next truly empty
+                              while (
+                                nextAvailableSlot < 25 &&
+                                slots[nextAvailableSlot] !== null
+                              ) {
+                                nextAvailableSlot++;
+                              }
+                              if (nextAvailableSlot < 25) {
+                                slots[nextAvailableSlot] = r;
+                                nextAvailableSlot++;
+                              }
+                            }
+                          }
+                        });
+
+                        return slots.map((lineData, idx) => {
+                          let content =
+                            lineData?.contenido || lineData?.texto_original;
+
+                          if (content && comparecientes.length > 0) {
+                            const names = comparecientes
+                              .map(
+                                (c) =>
+                                  c.compareciente
+                                    ?.Nombre_completo_compadeciente ||
+                                  c.Nombre_completo_compadeciente ||
+                                  c.Nombre,
+                              )
+                              .filter(Boolean);
+                            if (names.length > 0) {
+                              const escapedNames = names.map((name) =>
+                                name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+                              );
+                              const pattern = new RegExp(
+                                `(${escapedNames.join("|")})`,
+                                "gi",
+                              );
+                              const parts = String(content).split(pattern);
+                              content = parts.map((part, i) =>
+                                names.some(
+                                  (n) => n.toLowerCase() === part.toLowerCase(),
+                                ) ? (
+                                  <span
+                                    key={i}
+                                    className="font-bold bg-yellow-200/50 dark:bg-yellow-900/50 px-1 rounded-sm text-slate-900 dark:text-yellow-100 border-b-2 border-slate-900 dark:border-yellow-200/50"
+                                  >
+                                    {part}
+                                  </span>
+                                ) : (
+                                  part
+                                ),
+                              );
+                            }
+                          }
+
+                          // Calculate the display line indicator
+                          // If r.indicador_renglon exists, use it.
+                          // Otherwise fallback to logical numbering
+                          const displayIndicator =
+                            lineData?.indicador_renglon ||
+                            lineData?.numero_linea ||
+                            (isAnverso ? idx + 1 : idx + 26);
+
+                          return (
                             <div
-                              className={cn(
-                                "w-full px-1 group-hover/line:bg-blue-50/10 transition-colors uppercase whitespace-nowrap",
-                                !lineData?.texto_original && "opacity-0",
-                              )}
-                              style={{ fontSize: "0.75em" }}
+                              key={idx}
+                              className="relative border-b border-cyan-200/50 dark:border-cyan-800/30 flex items-baseline h-[2.6rem] w-full group/line"
                             >
-                              {content}
+                              <span className="absolute left-[-2.5rem] w-8 text-sm text-slate-400 dark:text-slate-600 font-sans select-none text-right flex items-center justify-end h-full pr-2">
+                                {displayIndicator}
+                              </span>
+                              <div
+                                className={cn(
+                                  "w-full px-1 group-hover/line:bg-blue-50/10 transition-colors uppercase whitespace-nowrap overflow-hidden text-ellipsis",
+                                  !lineData && "opacity-0",
+                                )}
+                                style={{ fontSize: "0.75em" }}
+                              >
+                                {content}
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        });
+                      })()}
                     </div>
 
                     {/* Footer Stamp */}

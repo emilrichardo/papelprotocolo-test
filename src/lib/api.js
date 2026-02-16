@@ -5,11 +5,13 @@ export async function uploadDocument(file) {
   formData.append("binaryFile", file); // Changed from 'file' to 'binaryFile' based on prompt
   formData.append("type", "ocr-scan");
 
+  formData.append("active_functions", "all");
+
   // Use a default document ID if not provided - prompt implies it's required.
   // We'll use a placeholder or let the user input it?
   // The prompt example has a hardcoded ID: f5fac439-8a5e-48c4-96f2-ed15f3e61488.
   // I will add it as a constant for now or optional param.
-  formData.append("document_id", "f5fac439-8a5e-48c4-96f2-ed15f3e61488");
+  formData.append("document_id", "eddd7373-f3fe-4831-9740-a34976694722");
 
   const response = await fetch(`${API_BASE_URL}/process-document`, {
     method: "POST",
