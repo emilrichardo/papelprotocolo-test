@@ -248,15 +248,9 @@ export function SmartViewer({
     if (orientationOverrides[page.pagina])
       return orientationOverrides[page.pagina];
 
-    // Prioritize orientacion property from JSON
-    if (page.orientacion) {
-      const lower = page.orientacion.toLowerCase();
-      if (lower === "anverso" || lower === "amberso" || lower === "ambverso")
-        return "Anverso";
-      if (lower === "reverso") return "Reverso";
-    }
-
-    // Alternating logic as fallback based on array index
+    // Force strict alternation based on index:
+    // Index 0 -> Anverso, Index 1 -> Reverso, Index 2 -> Anverso, etc.
+    // This overrides any 'orientacion' property from JSON to prevent duplicate types in sequence.
     return index % 2 === 0 ? "Anverso" : "Reverso";
   };
 
