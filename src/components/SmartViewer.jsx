@@ -13,6 +13,9 @@ import {
   CheckCircle,
   AlertCircle,
   History,
+  LayoutList,
+  AlignLeft,
+  FileStack,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { cn } from "../lib/utils";
@@ -24,6 +27,7 @@ export function SmartViewer({
   onSelectVersion,
 }) {
   const [activePage, setActivePage] = useState(null);
+  const [activeTab, setActiveTab] = useState("general");
   const [orientationOverrides, setOrientationOverrides] = useState({});
   const [copied, setCopied] = useState(false);
 
@@ -203,6 +207,7 @@ export function SmartViewer({
         data.extraction.paginas_escritura ||
         data.extraction.paginas_extaidas ||
         data.extraction.paginas_extraidas ||
+        data.extraction.paginas_escaneadas ||
         data.extraction.paginas)) ||
       data.result?.extraction ||
       data.paginas_escritura ||
@@ -558,233 +563,339 @@ export function SmartViewer({
           </div>
         </div>
       ) : (
-        <>
-          {/* Header / Metadata */}
-          {metadata && (
-            <div className="space-y-2 shrink-0 bg-white dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm transition-all duration-300">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-white leading-tight truncate">
-                    {metadata.tipo_contrato || "Documento Protocolar"}
-                  </h2>
+        <div className="flex flex-col h-full min-h-0 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+          {/* Tabs Header */}
+          <div className="flex items-center border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900">
+            <button
+              onClick={() => setActiveTab("general")}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-all border-b-2",
+                activeTab === "general"
+                  ? "border-blue-500 text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-800/50"
+                  : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-slate-300",
+              )}
+            >
+              <LayoutList className="w-4 h-4" />
+              General
+            </button>
+            <button
+              onClick={() => setActiveTab("paginas")}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-all border-b-2",
+                activeTab === "paginas"
+                  ? "border-blue-500 text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-800/50"
+                  : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-slate-300",
+              )}
+            >
+              <FileStack className="w-4 h-4" />
+              Páginas
+              <span className="ml-1 text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full text-slate-600 dark:text-slate-400">
+                {paginas.length}
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab("texto")}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-all border-b-2",
+                activeTab === "texto"
+                  ? "border-blue-500 text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-800/50"
+                  : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-slate-300",
+              )}
+            >
+              <AlignLeft className="w-4 h-4" />
+              Texto
+            </button>
+          </div>
 
-                  {/* Version Selector */}
-                  {history && history.length > 0 && (
-                    <div className="relative group">
-                      <select
-                        className="appearance-none bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs py-1 pl-7 pr-8 rounded-full text-slate-600 dark:text-slate-300 cursor-pointer hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                        onChange={(e) => {
-                          const selected = history.find(
-                            (h) => h.id.toString() === e.target.value,
-                          );
-                          if (selected) onSelectVersion(selected);
-                        }}
-                      >
-                        <option value="" disabled selected>
-                          Historial ({history.length})
-                        </option>
-                        {history.map((item) => (
-                          <option key={item.id} value={item.id}>
-                            {new Date(item.created_at).toLocaleDateString()} -{" "}
-                            {item.rating || "?"}★ {item.comment ? "📝" : ""}
-                          </option>
-                        ))}
-                      </select>
-                      <History className="w-3 h-3 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      <ChevronDown className="w-3 h-3 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
-                  )}
-                </div>
+          {/* Tab Content */}
+          <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+            {activeTab === "general" && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                {/* Header / Metadata */}
+                {metadata && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <h2 className="text-lg font-bold text-slate-900 dark:text-white leading-tight truncate">
+                          {metadata.tipo_contrato || "Documento Protocolar"}
+                        </h2>
 
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleCopyHash}
-                  className="h-6 w-6 ml-2"
-                >
-                  {copied ? (
-                    <Check className="w-3 h-3 text-green-500" />
-                  ) : (
-                    <Copy className="w-3 h-3 text-slate-400" />
-                  )}
-                </Button>
-              </div>
-
-              {/* Key Value Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2 text-xs">
-                <div>
-                  <span className="block text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
-                    Escritura No.
-                  </span>
-                  <span className="font-mono text-slate-900 dark:text-slate-200 font-medium">
-                    {metadata.numero_escritura || "--"}
-                  </span>
-                </div>
-                <div>
-                  <span className="block text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
-                    Fecha
-                  </span>
-                  <span className="text-slate-900 dark:text-slate-200 font-medium">
-                    {metadata.fecha_escritura || "--"}
-                  </span>
-                </div>
-                <div>
-                  <span className="block text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
-                    Lugar
-                  </span>
-                  <span className="text-slate-900 dark:text-slate-200 font-medium">
-                    {metadata.lugar_escritura_publica || "--"}
-                  </span>
-                </div>
-                <div>
-                  <span className="block text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
-                    Estado
-                  </span>
-                  <span
-                    className={cn(
-                      "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium",
-                      metadata.estado_escritura_publica === "FIRMADA"
-                        ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                        : "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300",
-                    )}
-                  >
-                    {metadata.estado_escritura_publica || "BORRADOR"}
-                  </span>
-                </div>
-                <div className="col-span-2">
-                  <span className="block text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
-                    Notario
-                  </span>
-                  <span className="text-slate-900 dark:text-slate-200 font-medium">
-                    {metadata.nombre_de_abogado || "--"}
-                  </span>
-                </div>
-                <div>
-                  <span className="block text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
-                    Vencimiento
-                  </span>
-                  <span className="text-slate-900 dark:text-slate-200 font-medium">
-                    {metadata.vencimiento_escritura_publica || "--"}
-                  </span>
-                </div>
-                <div>
-                  <span className="block text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
-                    Año
-                  </span>
-                  <span className="text-slate-900 dark:text-slate-200 font-medium">
-                    {metadata.ano_escritura_publica || "--"}
-                  </span>
-                </div>
-              </div>
-
-              <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug border-t border-slate-100 dark:border-slate-800 pt-2 mt-1">
-                {metadata.resumen}
-              </p>
-            </div>
-          )}
-
-          {/* Comparecientes */}
-          {comparecientes.length > 0 && (
-            <div className="space-y-3 shrink-0">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                <User className="w-4 h-4" /> Comparecientes (
-                {comparecientes.length})
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {comparecientes.map((item, idx) => {
-                  // Handle both { compareciente: {...} } and direct {...} structures
-                  const c = item.compareciente || item;
-                  return (
-                    <div
-                      key={idx}
-                      className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-sm"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-medium text-slate-900 dark:text-slate-100">
-                            {c.Nombre_completo_compadeciente ||
-                              c.Nombre ||
-                              c.nombre ||
-                              "Nombre desconocido"}
-                          </p>
-                          {(c.Rol_compadeciente || c.Rol || c.rol) && (
-                            <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                              {c.Rol_compadeciente || c.Rol || c.rol}
-                            </span>
-                          )}
-                        </div>
-                        {(c.Edad_compadeciente || c.Edad || c.edad) && (
-                          <span className="text-xs text-slate-500">
-                            {c.Edad_compadeciente || c.Edad || c.edad} años
-                          </span>
+                        {/* Version Selector */}
+                        {history && history.length > 0 && (
+                          <div className="relative group">
+                            <select
+                              className="appearance-none bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs py-1 pl-7 pr-8 rounded-full text-slate-600 dark:text-slate-300 cursor-pointer hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                              onChange={(e) => {
+                                const selected = history.find(
+                                  (h) => h.id.toString() === e.target.value,
+                                );
+                                if (selected) onSelectVersion(selected);
+                              }}
+                            >
+                              <option value="" disabled selected>
+                                Historial ({history.length})
+                              </option>
+                              {history.map((item) => (
+                                <option key={item.id} value={item.id}>
+                                  {new Date(
+                                    item.created_at,
+                                  ).toLocaleDateString()}{" "}
+                                  - {item.rating || "?"}★{" "}
+                                  {item.comment ? "📝" : ""}
+                                </option>
+                              ))}
+                            </select>
+                            <History className="w-3 h-3 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            <ChevronDown className="w-3 h-3 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                          </div>
                         )}
                       </div>
-                      {(c.Id_doc_identificacion ||
-                        c.DPI ||
-                        c.Identificacion) && (
-                        <p className="mt-2 text-xs text-slate-500 break-words">
-                          {c.Tipo_doc_identificacion || "ID"}:{" "}
-                          {c.Id_doc_identificacion || c.DPI || c.Identificacion}
-                        </p>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
 
-          {/* Pages Grid */}
-          <div className="flex-1 min-h-0 flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2 mb-3">
-              <FileText className="w-4 h-4" /> Páginas Extraídas (
-              {paginas.length})
-            </h3>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 overflow-y-auto pb-4 pr-2">
-              {paginas.map((page, idx) => {
-                const orientation = getPageOrientation(page, idx);
-                const isAnverso = orientation === "Anverso";
-                const label = isAnverso ? "A" : "R";
-                const displayPageNum = idx + 1;
-
-                return (
-                  <div
-                    key={page.pagina}
-                    onClick={() => setActivePage(page)}
-                    className="group cursor-pointer aspect-[3/4] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg hover:border-blue-500 dark:hover:border-blue-500 shadow-sm hover:shadow-md transition-all relative flex flex-col items-center justify-center p-4 text-center"
-                  >
-                    {/* A/R Badge */}
-                    <div
-                      className={cn(
-                        "absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border",
-                        isAnverso
-                          ? "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800"
-                          : "bg-orange-50 text-orange-600 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800",
-                      )}
-                    >
-                      {label}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleCopyHash}
+                        className="h-6 w-6 ml-2"
+                      >
+                        {copied ? (
+                          <Check className="w-3 h-3 text-green-500" />
+                        ) : (
+                          <Copy className="w-3 h-3 text-slate-400" />
+                        )}
+                      </Button>
                     </div>
 
-                    <FileText className="w-8 h-8 text-slate-300 group-hover:text-blue-500 mb-2 transition-colors" />
-                    <span className="font-medium text-slate-700 dark:text-slate-300">
-                      Página {displayPageNum}
-                    </span>
-                    <span className="text-xs text-slate-400 mt-1">
-                      {page.lineas?.length || 0} líneas
-                    </span>
+                    {/* Key Value Grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-4 text-xs bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-100 dark:border-slate-800/50">
+                      <div>
+                        <span className="block text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">
+                          Escritura No.
+                        </span>
+                        <span className="font-mono text-slate-900 dark:text-slate-200 font-medium text-base">
+                          {metadata.numero_escritura || "--"}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="block text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">
+                          Fecha
+                        </span>
+                        <span className="text-slate-900 dark:text-slate-200 font-medium">
+                          {metadata.fecha_escritura || "--"}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="block text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">
+                          Lugar
+                        </span>
+                        <span className="text-slate-900 dark:text-slate-200 font-medium">
+                          {metadata.lugar_escritura_publica || "--"}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="block text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">
+                          Estado
+                        </span>
+                        <span
+                          className={cn(
+                            "inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium",
+                            metadata.estado_escritura_publica === "FIRMADA"
+                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                              : "bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-300",
+                          )}
+                        >
+                          {metadata.estado_escritura_publica || "BORRADOR"}
+                        </span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="block text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">
+                          Notario
+                        </span>
+                        <span className="text-slate-900 dark:text-slate-200 font-medium">
+                          {metadata.nombre_de_abogado || "--"}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="block text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">
+                          Vencimiento
+                        </span>
+                        <span className="text-slate-900 dark:text-slate-200 font-medium">
+                          {metadata.vencimiento_escritura_publica || "--"}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="block text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">
+                          Año
+                        </span>
+                        <span className="text-slate-900 dark:text-slate-200 font-medium">
+                          {metadata.ano_escritura_publica || "--"}
+                        </span>
+                      </div>
+                    </div>
 
-                    <div className="absolute inset-x-0 bottom-0 py-2 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 opacity-0 group-hover:opacity-100 transition-opacity rounded-b-lg flex items-center justify-center">
-                      <span className="text-xs font-medium text-blue-600 dark:text-blue-400 flex items-center">
-                        Ver Detalle <Maximize2 className="w-3 h-3 ml-1" />
-                      </span>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed border-l-4 border-blue-500 pl-3 py-1 bg-blue-50/50 dark:bg-blue-900/10 italic">
+                      {metadata.resumen}
+                    </p>
+                  </div>
+                )}
+
+                {/* Comparecientes */}
+                {comparecientes.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
+                      <User className="w-4 h-4" /> Comparecientes (
+                      {comparecientes.length})
+                    </h3>
+                    <div className="grid grid-cols-1 gap-3">
+                      {comparecientes.map((item, idx) => {
+                        const c = item.compareciente || item;
+                        return (
+                          <div
+                            key={idx}
+                            className="p-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-lg flex items-start justify-between group hover:border-blue-200 dark:hover:border-blue-800 transition-colors"
+                          >
+                            <div>
+                              <p className="font-semibold text-slate-900 dark:text-slate-100 mb-1">
+                                {c.Nombre_completo_compadeciente ||
+                                  c.Nombre ||
+                                  c.nombre ||
+                                  "Nombre desconocido"}
+                              </p>
+                              {(c.Rol_compadeciente || c.Rol || c.rol) && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 mb-2">
+                                  {c.Rol_compadeciente || c.Rol || c.rol}
+                                </span>
+                              )}
+
+                              {/* Additional Details: Calidad & Entidad */}
+                              {(c.Calidad_compadeciente || c.calidad) && (
+                                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 mb-0.5">
+                                  <span className="font-semibold text-slate-500 dark:text-slate-500">
+                                    Calidad:
+                                  </span>{" "}
+                                  {c.Calidad_compadeciente || c.calidad}
+                                </p>
+                              )}
+                              {(c.Nombre_persona_juridica ||
+                                c.representacion) && (
+                                <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">
+                                  <span className="font-semibold text-slate-500 dark:text-slate-500">
+                                    Entidad:
+                                  </span>{" "}
+                                  {c.Nombre_persona_juridica ||
+                                    c.representacion}
+                                </p>
+                              )}
+
+                              {(c.Id_doc_identificacion ||
+                                c.DPI ||
+                                c.Identificacion) && (
+                                <p className="text-xs text-slate-500 font-mono mt-1">
+                                  {c.Tipo_doc_identificacion || "ID"}:{" "}
+                                  {c.Id_doc_identificacion ||
+                                    c.DPI ||
+                                    c.Identificacion}
+                                </p>
+                              )}
+                            </div>
+                            {(c.Edad_compadeciente || c.Edad || c.edad) && (
+                              <span className="text-xs font-medium text-slate-400 whitespace-nowrap bg-white dark:bg-slate-800 px-2 py-1 rounded border border-slate-100 dark:border-slate-700">
+                                {c.Edad_compadeciente || c.Edad || c.edad} Años
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === "paginas" && (
+              <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="flex flex-col gap-3 pb-4">
+                  {paginas.map((page, idx) => {
+                    const orientation = getPageOrientation(page, idx);
+                    const isAnverso = orientation === "Anverso";
+                    const label = isAnverso ? "A" : "R";
+                    const displayPageNum = idx + 1;
+                    const renglonesCount =
+                      page.renglones?.length ||
+                      page.lineas?.length ||
+                      page.cuerpo?.lineas?.length ||
+                      0;
+
+                    return (
+                      <div
+                        key={page.pagina || idx}
+                        className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-sm relative flex items-center justify-between p-4"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="relative shrink-0">
+                            <div className="w-12 h-16 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded flex items-center justify-center">
+                              <FileText className="w-6 h-6 text-slate-300" />
+                            </div>
+                            <div
+                              className={cn(
+                                "absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold border shadow-sm",
+                                isAnverso
+                                  ? "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-800"
+                                  : "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/50 dark:text-orange-300 dark:border-orange-800",
+                              )}
+                            >
+                              {label}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-semibold text-slate-700 dark:text-slate-200">
+                                {page.pagina_protocolo
+                                  ? `Protocolo: ${page.pagina_protocolo}`
+                                  : `Página ${displayPageNum}`}
+                              </span>
+                              {page.folio !== null &&
+                                page.folio !== undefined && (
+                                  <span className="text-xs text-slate-500 dark:text-slate-400 px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">
+                                    Folio: {page.folio}
+                                  </span>
+                                )}
+                            </div>
+
+                            <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+                              <span className="capitalize">
+                                {page.orientacion || orientation}
+                              </span>
+                              <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700" />
+                              <span>{renglonesCount} renglones</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {activeTab === "texto" && (
+              <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                {info.texto_extraido || info.extracted_text ? (
+                  <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-inner">
+                    <pre className="text-xs text-slate-700 dark:text-slate-300 font-mono whitespace-pre-wrap leading-relaxed">
+                      {info.texto_extraido || info.extracted_text}
+                    </pre>
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-slate-400">
+                    <FileText className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                    <p>No hay texto extraído disponible.</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-        </>
+        </div>
       )}
     </div>
   );
