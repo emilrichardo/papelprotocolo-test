@@ -31,7 +31,7 @@ function App() {
   const [status, setStatus] = useState("idle"); // idle, uploading, processing, completed, error
   const [statusMessage, setStatusMessage] = useState("");
   const [result, setResult] = useState(null);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(true);
   const [viewMode, setViewMode] = useState("smart"); // 'smart' or 'json'
   const [isProcessing, setIsProcessing] = useState(false);
   const [extractionResult, setExtractionResult] = useState(null);

@@ -76,20 +76,30 @@ export function SmartViewer({
   // Helper to find key case-insensitively or with variations
   // Helper to find key case-insensitively or with variations
   const getValue = (keys) => {
-    // 1. Check root info
     for (const key of keys) {
-      if (info[key]) return info[key];
-    }
-
-    // 2. Check documento_metadata
-    if (info.documento_metadata) {
-      for (const key of keys) {
-        if (info.documento_metadata[key]) return info.documento_metadata[key];
+      // Handle dot notation like "comunicacional.titulo"
+      if (key.includes(".")) {
+        const parts = key.split(".");
+        let val = info;
+        for (const part of parts) {
+          val = val?.[part] || val?.[part.toLowerCase()]; // Try lowercase too just in case
+        }
+        if (val) return val;
       }
-    }
 
-    // 3. Last resort: comunicacional
-    for (const key of keys) {
+      // 1. Check root info
+      if (info[key]) return info[key];
+
+      // 2. Check metadata (new structure)
+      if (info.metadata?.[key]) return info.metadata[key];
+
+      // 3. Check documento_metadata (legacy)
+      if (info.documento_metadata?.[key]) return info.documento_metadata[key];
+
+      // 4. Check comunicacional root (new requirement)
+      if (info.comunicacional?.[key]) return info.comunicacional[key];
+
+      // 5. Last resort: comunicacional.contenido_periodistico
       if (info.comunicacional?.contenido_periodistico?.[key])
         return info.comunicacional.contenido_periodistico[key];
     }
@@ -138,11 +148,17 @@ export function SmartViewer({
       "Agno",
     ]),
     tipo_contrato: getValue([
+      "comunicacional.titulo",
       "descripcion_tipo_contrato",
       "Tipo_contrato",
       "titulo",
     ]),
-    resumen: getValue(["resumen de dos lineas", "Resumen", "resumen"]),
+    resumen: getValue([
+      "comunicacional.resumen",
+      "resumen de dos lineas",
+      "Resumen",
+      "resumen",
+    ]),
   };
 
   // Scroll to active page when entering view
