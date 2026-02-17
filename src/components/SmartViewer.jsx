@@ -422,9 +422,6 @@ export function SmartViewer({
                           <span className="font-mono text-xl text-slate-700 dark:text-slate-300 font-bold tracking-widest">
                             {metadata.numero_escritura || "982166"}
                           </span>
-                          <span className="font-serif text-5xl font-bold text-slate-900 dark:text-white">
-                            R
-                          </span>
                         </div>
                       </div>
                     )}
