@@ -34,9 +34,6 @@ function App() {
   const [result, setResult] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [viewMode, setViewMode] = useState("smart"); // 'smart' or 'json'
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [extractionResult, setExtractionResult] = useState(null);
-  const [error, setError] = useState(null);
   const [history, setHistory] = useState([]);
   const [pdfPages, setPdfPages] = useState(6);
   const [useMock] = useState(false);
@@ -81,7 +78,6 @@ function App() {
 
     if (savedResult && savedFileName) {
       try {
-        setExtractionResult(JSON.parse(savedResult));
         setResult(JSON.parse(savedResult));
         setFile({ name: savedFileName, size: 0 }); // Mock file object for UI display
         setStatus("completed");
@@ -147,8 +143,6 @@ function App() {
 
     setStatus("uploading");
     setStatusMessage("Subiendo archivo...");
-    setIsProcessing(true); // Added from provided code edit
-    setError(null); // Added from provided code edit
 
     try {
       if (useMock) {
@@ -173,7 +167,6 @@ function App() {
             },
           },
         };
-        setExtractionResult(mockData.default);
         setResult(mockData.default); // Keep original result state updated
 
         // Save to Local Storage
@@ -185,7 +178,6 @@ function App() {
 
         setStatus("completed"); // Changed 'complete' to 'completed'
         setStatusMessage("Procesamiento completado exitosamente."); // Added from provided code edit
-        setIsProcessing(false); // Added from provided code edit
         fetchHistory(file.name); // Call fetchHistory after mock processing
       } else {
         const { jobId } = await uploadDocument(file);
@@ -205,7 +197,6 @@ function App() {
               setStatus("completed");
               setStatusMessage("Procesamiento completado exitosamente.");
               setResult(job.result);
-              setExtractionResult(job.result); // Keep extractionResult updated
 
               // Save to Local Storage
               localStorage.setItem(
@@ -214,7 +205,7 @@ function App() {
               );
               localStorage.setItem("currentFileName", file.name);
 
-              setIsProcessing(false); // Added from provided code edit
+              localStorage.setItem("currentFileName", file.name);
 
               const escrituraNo =
                 job.result?.extraction?.extracted_info?.comunicacional
@@ -236,8 +227,6 @@ function App() {
               clearInterval(interval);
               setStatus("error");
               setStatusMessage(job.error || "El procesamiento falló.");
-              setError(job.error || "El procesamiento falló."); // Keep error state updated
-              setIsProcessing(false); // Added from provided code edit
             } else {
               // Update message if processing stage is available
               if (job.processingStage) {
@@ -249,16 +238,12 @@ function App() {
             clearInterval(interval);
             setStatus("error");
             setStatusMessage(err.message);
-            setError(err.message); // Keep error state updated
-            setIsProcessing(false); // Added from provided code edit
           }
         }, 2000);
       }
     } catch (err) {
       setStatus("error");
       setStatusMessage(err.message);
-      setError(err.message); // Keep error state updated
-      setIsProcessing(false); // Added from provided code edit
     }
   };
 
@@ -267,8 +252,6 @@ function App() {
     setStatus("idle");
     setResult(null);
     setStatusMessage("");
-    setExtractionResult(null);
-    setError(null);
     setHistory([]);
 
     localStorage.removeItem("extractionResult");
@@ -277,7 +260,6 @@ function App() {
 
   const handleSelectVersion = (versionData) => {
     // Added from provided code edit
-    setExtractionResult(versionData.extracted_data);
     setResult(versionData.extracted_data); // Also update the original result state
   };
 
@@ -285,7 +267,6 @@ function App() {
     // Restore state from document history item
     setFile({ name: doc.pdf_name, size: 0 }); // Mock file
     setResult(doc.extracted_data);
-    setExtractionResult(doc.extracted_data);
     setStatus("completed");
 
     // Fetch full history for this document

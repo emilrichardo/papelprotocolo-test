@@ -52,16 +52,16 @@ export function SmartViewer({
     return data || {};
   }, [data]);
 
-  const paginas = React.useMemo(
-    () =>
+  const paginas = React.useMemo(() => {
+    const raw =
       info.paginas_extaidas ||
       info.paginas_extraidas ||
       info.paginas_escritura ||
       info.paginas ||
       info.paginas_escaneadas ||
-      [],
-    [info],
-  );
+      [];
+    return Array.isArray(raw) ? raw : [];
+  }, [info]);
 
   // Robust comparecientes extraction
   const comparecientes = React.useMemo(() => {
