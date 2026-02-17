@@ -8,6 +8,7 @@ import { RatingFeedback } from "./components/RatingFeedback";
 import { SkeletonLoader } from "./components/SkeletonLoader";
 import { Button } from "./components/ui/button";
 import { uploadDocument, pollJobStatus } from "./lib/api";
+import { DocumentLibrary } from "./components/DocumentLibrary";
 import {
   RefreshCcw,
   Moon,
@@ -213,7 +214,19 @@ function App() {
               localStorage.setItem("currentFileName", file.name);
 
               setIsProcessing(false); // Added from provided code edit
-              fetchHistory(file.name); // Call fetchHistory after successful processing
+
+              const escrituraNo =
+                job.result?.extraction?.extracted_info?.comunicacional
+                  ?.contenido_periodistico?.numero_escritura ||
+                job.result?.default?.extraction?.extracted_info?.comunicacional
+                  ?.contenido_periodistico?.numero_escritura;
+
+              if (escrituraNo) {
+                fetchHistory(escrituraNo);
+              } else {
+                fetchHistory(file.name);
+              }
+
               setTimeout(() => {
                 setStatus("idle");
                 setStatusMessage("");
@@ -267,6 +280,21 @@ function App() {
     setResult(versionData.extracted_data); // Also update the original result state
   };
 
+  const handleLoadDocument = (doc) => {
+    // Restore state from document history item
+    setFile({ name: doc.pdf_name, size: 0 }); // Mock file
+    setResult(doc.extracted_data);
+    setExtractionResult(doc.extracted_data);
+    setStatus("completed");
+
+    // Fetch full history for this document
+    if (doc.escritura_no) {
+      fetchHistory(doc.escritura_no);
+    } else {
+      fetchHistory(doc.pdf_name);
+    }
+  };
+
   return (
     <div className="flex h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 transition-colors">
       {/* Left Panel: Upload & Preview */}
@@ -275,17 +303,20 @@ function App() {
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             Lexia <span className="text-blue-600">Protocolo</span>
           </h1>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsDarkMode(!isDarkMode)}
-          >
-            {isDarkMode ? (
-              <Sun className="w-5 h-5" />
-            ) : (
-              <Moon className="w-5 h-5" />
-            )}
-          </Button>
+          <div className="flex items-center gap-2">
+            <DocumentLibrary onLoadDocument={handleLoadDocument} />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsDarkMode(!isDarkMode)}
+            >
+              {isDarkMode ? (
+                <Sun className="w-5 h-5" />
+              ) : (
+                <Moon className="w-5 h-5" />
+              )}
+            </Button>
+          </div>
         </div>
 
         <div className="flex-1 min-h-0 relative flex flex-col">
@@ -361,6 +392,12 @@ function App() {
             <RatingFeedback
               fileName={file?.name || "documento_desconocido.pdf"}
               extractedData={result}
+              escrituraNo={
+                result.extraction?.extracted_info?.comunicacional
+                  ?.contenido_periodistico?.numero_escritura ||
+                result.default?.extraction?.extracted_info?.comunicacional
+                  ?.contenido_periodistico?.numero_escritura
+              }
             />
           </div>
         )}

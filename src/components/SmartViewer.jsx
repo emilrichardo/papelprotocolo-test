@@ -708,22 +708,27 @@ export function SmartViewer({
                           {metadata.nombre_de_abogado || "--"}
                         </span>
                       </div>
-                      <div>
-                        <span className="block text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">
-                          Vencimiento
-                        </span>
-                        <span className="text-slate-900 dark:text-slate-200 font-medium">
-                          {metadata.vencimiento_escritura_publica || "--"}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="block text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">
-                          Año
-                        </span>
-                        <span className="text-slate-900 dark:text-slate-200 font-medium">
-                          {metadata.ano_escritura_publica || "--"}
-                        </span>
-                      </div>
+                      {metadata.vencimiento_escritura_publica &&
+                        metadata.vencimiento_escritura_publica !== "null" && (
+                          <div>
+                            <span className="block text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">
+                              Vencimiento
+                            </span>
+                            <span className="text-slate-900 dark:text-slate-200 font-medium">
+                              {metadata.vencimiento_escritura_publica}
+                            </span>
+                          </div>
+                        )}
+                      {metadata.ano_escritura_publica && (
+                        <div>
+                          <span className="block text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">
+                            Año
+                          </span>
+                          <span className="text-slate-900 dark:text-slate-200 font-medium">
+                            {metadata.ano_escritura_publica}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed border-l-4 border-blue-500 pl-3 py-1 bg-blue-50/50 dark:bg-blue-900/10 italic">
