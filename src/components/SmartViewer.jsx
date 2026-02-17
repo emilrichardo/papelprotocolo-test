@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { LexiaLogo } from "./LexiaLogo";
 import {
   Copy,
   Check,
@@ -25,6 +26,7 @@ export function SmartViewer({
   className,
   history = [],
   onSelectVersion,
+  fileName,
 }) {
   const [activePage, setActivePage] = useState(null);
   const [activeTab, setActiveTab] = useState("general");
@@ -699,6 +701,19 @@ export function SmartViewer({
                           {metadata.estado_escritura_publica || "BORRADOR"}
                         </span>
                       </div>
+                      <div className="flex flex-col">
+                        <h3 className="font-semibold text-slate-800 dark:text-slate-200 leading-tight">
+                          Resultados
+                        </h3>
+                        {fileName && (
+                          <span
+                            className="text-xs text-slate-500 font-normal truncate max-w-[300px]"
+                            title={fileName}
+                          >
+                            {fileName}
+                          </span>
+                        )}
+                      </div>{" "}
                       <div className="col-span-2">
                         <span className="block text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">
                           Notario
@@ -830,7 +845,7 @@ export function SmartViewer({
                           <div className="flex items-center gap-4">
                             <div className="relative shrink-0">
                               <div className="w-12 h-16 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded flex items-center justify-center">
-                                <FileText className="w-6 h-6 text-slate-300" />
+                                <FileText className="w-6 h-6 text-[#021A4D]" />
                               </div>
                             </div>
 

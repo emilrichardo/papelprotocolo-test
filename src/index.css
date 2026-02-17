@@ -13,6 +13,9 @@
   --color-slate-800: #262626;
   --color-slate-900: #171717;
   --color-slate-950: #0a0a0a;
+
+  --color-brand-blue: #021a4d;
+  --color-brand-gold: #ebaa40;
 }
 
 /* Dark mode: invert the slate palette */
@@ -29,6 +32,9 @@
   --color-slate-800: #f5f5f5;
   --color-slate-900: #ffffff;
   --color-slate-950: #ffffff;
+
+  --color-brand-blue: #3b82f6; /* Lighter blue for dark mode if needed, or keep brand consistency */
+  --color-brand-gold: #ebaa40;
 }
 
 @layer base {

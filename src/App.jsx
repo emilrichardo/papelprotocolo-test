@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { LexiaLogo } from "./components/LexiaLogo";
 import { Dropzone } from "./components/Dropzone";
 import { PDFPreview } from "./components/PDFPreview";
 import { StatusIndicator } from "./components/StatusIndicator";
@@ -300,9 +301,12 @@ function App() {
       {/* Left Panel: Upload & Preview */}
       <div className="w-1/2 flex flex-col p-6 border-r border-slate-200 dark:border-slate-800">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-            Lexia <span className="text-blue-600">Protocolo</span>
-          </h1>
+          <div className="flex items-center gap-2">
+            <LexiaLogo
+              className="h-8 w-auto"
+              mode={isDarkMode ? "dark" : "light"}
+            />
+          </div>
           <div className="flex items-center gap-2">
             <DocumentLibrary onLoadDocument={handleLoadDocument} />
             <Button
