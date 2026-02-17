@@ -585,21 +585,7 @@ export function SmartViewer({
               <LayoutList className="w-4 h-4" />
               General
             </button>
-            <button
-              onClick={() => setActiveTab("paginas")}
-              className={cn(
-                "flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-all border-b-2",
-                activeTab === "paginas"
-                  ? "border-blue-500 text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-800/50"
-                  : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-slate-300",
-              )}
-            >
-              <FileStack className="w-4 h-4" />
-              Páginas
-              <span className="ml-1 text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full text-slate-600 dark:text-slate-400">
-                {paginas.length}
-              </span>
-            </button>
+
             <button
               onClick={() => setActiveTab("texto")}
               className={cn(
@@ -820,61 +806,62 @@ export function SmartViewer({
                     </div>
                   </div>
                 )}
-              </div>
-            )}
+                {/* Pages List within General Tab */}
+                <div className="space-y-3">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
+                    <FileStack className="w-4 h-4" /> Páginas ({paginas.length})
+                  </h3>
+                  <div className="flex flex-col gap-3 pb-4">
+                    {paginas.map((page, idx) => {
+                      const orientation = getPageOrientation(page, idx);
 
-            {activeTab === "paginas" && (
-              <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <div className="flex flex-col gap-3 pb-4">
-                  {paginas.map((page, idx) => {
-                    const orientation = getPageOrientation(page, idx);
+                      const displayPageNum = idx + 1;
+                      const renglonesCount =
+                        page.renglones?.length ||
+                        page.lineas?.length ||
+                        page.cuerpo?.lineas?.length ||
+                        0;
 
-                    const displayPageNum = idx + 1;
-                    const renglonesCount =
-                      page.renglones?.length ||
-                      page.lineas?.length ||
-                      page.cuerpo?.lineas?.length ||
-                      0;
-
-                    return (
-                      <div
-                        key={page.pagina || idx}
-                        className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-sm relative flex items-center justify-between p-4"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="relative shrink-0">
-                            <div className="w-12 h-16 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded flex items-center justify-center">
-                              <FileText className="w-6 h-6 text-slate-300" />
-                            </div>
-                          </div>
-
-                          <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-semibold text-slate-700 dark:text-slate-200">
-                                {page.pagina_protocolo
-                                  ? `Protocolo: ${page.pagina_protocolo}`
-                                  : `Página ${displayPageNum}`}
-                              </span>
-                              {page.folio !== null &&
-                                page.folio !== undefined && (
-                                  <span className="text-xs text-slate-500 dark:text-slate-400 px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">
-                                    Folio: {page.folio}
-                                  </span>
-                                )}
+                      return (
+                        <div
+                          key={page.pagina || idx}
+                          className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-sm relative flex items-center justify-between p-4"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="relative shrink-0">
+                              <div className="w-12 h-16 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded flex items-center justify-center">
+                                <FileText className="w-6 h-6 text-slate-300" />
+                              </div>
                             </div>
 
-                            <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
-                              <span className="capitalize">
-                                {page.orientacion || orientation}
-                              </span>
-                              <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700" />
-                              <span>{renglonesCount} renglones</span>
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-semibold text-slate-700 dark:text-slate-200">
+                                  {page.pagina_protocolo
+                                    ? `Protocolo: ${page.pagina_protocolo}`
+                                    : `Página ${displayPageNum}`}
+                                </span>
+                                {page.folio !== null &&
+                                  page.folio !== undefined && (
+                                    <span className="text-xs text-slate-500 dark:text-slate-400 px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">
+                                      Folio: {page.folio}
+                                    </span>
+                                  )}
+                              </div>
+
+                              <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+                                <span className="capitalize">
+                                  {page.orientacion || orientation}
+                                </span>
+                                <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700" />
+                                <span>{renglonesCount} renglones</span>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             )}
