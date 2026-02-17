@@ -774,7 +774,7 @@ export function SmartViewer({
                                   "Nombre desconocido"}
                               </p>
                               {(c.Rol_compadeciente || c.Rol || c.rol) && (
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-bold  text-white border border-blue-200   mb-2">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-bold bg-blue-50 text-[#021A4D] border border-blue-200 dark:bg-blue-900/30 dark:text-blue-100 dark:border-blue-700 mb-2 whitespace-normal break-words text-left block w-fit max-w-full">
                                   {c.Rol_compadeciente || c.Rol || c.rol}
                                 </span>
                               )}
@@ -811,7 +811,7 @@ export function SmartViewer({
                               )}
                             </div>
                             {(c.Edad_compadeciente || c.Edad || c.edad) && (
-                              <span className="text-xs font-bold whitespace-nowrap bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-md border border-slate-300 dark:border-slate-700">
+                              <span className="text-xs font-bold whitespace-nowrap bg-slate-100 text-slate-700 border border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 px-2.5 py-1 rounded-md">
                                 {c.Edad_compadeciente || c.Edad || c.edad} Años
                               </span>
                             )}
