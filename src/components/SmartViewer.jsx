@@ -692,7 +692,7 @@ export function SmartViewer({
                           className={cn(
                             "inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border",
                             metadata.estado_escritura_publica === "FIRMADA"
-                              ? "bg-green-100   border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800"
+                              ? "bg-green-100 text-green-800 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800"
                               : "bg-slate-100 text-slate-600 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700",
                           )}
                         >
