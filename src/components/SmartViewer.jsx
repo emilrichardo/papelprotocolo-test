@@ -690,10 +690,10 @@ export function SmartViewer({
                         </span>
                         <span
                           className={cn(
-                            "inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium",
+                            "inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border",
                             metadata.estado_escritura_publica === "FIRMADA"
-                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                              : "bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-300",
+                              ? "bg-green-100   border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800"
+                              : "bg-slate-100 text-slate-600 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700",
                           )}
                         >
                           {metadata.estado_escritura_publica || "BORRADOR"}
@@ -759,7 +759,7 @@ export function SmartViewer({
                                   "Nombre desconocido"}
                               </p>
                               {(c.Rol_compadeciente || c.Rol || c.rol) && (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 mb-2">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-bold  text-white border border-blue-200   mb-2">
                                   {c.Rol_compadeciente || c.Rol || c.rol}
                                 </span>
                               )}
@@ -796,7 +796,7 @@ export function SmartViewer({
                               )}
                             </div>
                             {(c.Edad_compadeciente || c.Edad || c.edad) && (
-                              <span className="text-xs font-medium text-slate-400 whitespace-nowrap bg-white dark:bg-slate-800 px-2 py-1 rounded border border-slate-100 dark:border-slate-700">
+                              <span className="text-xs font-bold whitespace-nowrap bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-md border border-slate-300 dark:border-slate-700">
                                 {c.Edad_compadeciente || c.Edad || c.edad} Años
                               </span>
                             )}
