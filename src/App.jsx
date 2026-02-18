@@ -287,6 +287,17 @@ function App() {
               className="h-8 w-auto"
               mode={isDarkMode ? "dark" : "light"}
             />
+            {file && (
+              <div className="ml-2 px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full border border-slate-200 dark:border-slate-700 flex items-center gap-2 max-w-[300px]">
+                <FileText className="w-3 h-3 text-slate-500" />
+                <span
+                  className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate"
+                  title={file.name}
+                >
+                  {file.name}
+                </span>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <DocumentLibrary onLoadDocument={handleLoadDocument} />
