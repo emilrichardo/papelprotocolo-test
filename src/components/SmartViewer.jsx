@@ -879,45 +879,30 @@ export function SmartViewer({
                             </div>
                           </div>
                           {/* Regex Protocol Comparison Alert */}
-                          {paginasNumeroProtocolo[idx] && (
-                            <div
-                              className={cn(
-                                "mt-3 mx-4 mb-4 p-2.5 rounded-md text-xs border flex items-start gap-2",
-                                paginasNumeroProtocolo[idx]
-                                  ?.pagina_protocolo === page.pagina_protocolo
-                                  ? "bg-green-50 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800"
-                                  : "bg-yellow-50 text-yellow-800 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-800",
-                              )}
-                            >
-                              {paginasNumeroProtocolo[idx]?.pagina_protocolo ===
-                              page.pagina_protocolo ? (
-                                <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                              ) : (
+                          {paginasNumeroProtocolo[idx] &&
+                            paginasNumeroProtocolo[idx]?.pagina_protocolo !==
+                              page.pagina_protocolo && (
+                              <div className="mt-3 mx-4 mb-4 p-2.5 rounded-md text-xs border flex items-start gap-2 bg-yellow-50 text-yellow-800 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-800">
                                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                              )}
-                              <div className="flex flex-col gap-1">
-                                <span className="font-semibold">
-                                  Verificación Regex:
-                                </span>
-                                <div className="font-mono">
-                                  {paginasNumeroProtocolo[idx]
-                                    ?.pagina_protocolo || "No detectado"}
-                                </div>
-                                {paginasNumeroProtocolo[idx]
-                                  ?.pagina_protocolo !==
-                                  page.pagina_protocolo && (
+                                <div className="flex flex-col gap-1">
+                                  <span className="font-semibold">
+                                    IA detectó:
+                                  </span>
+                                  <div className="font-mono">
+                                    {page.pagina_protocolo || "Nada"}
+                                  </div>
                                   <div className="mt-1 pt-1 border-t border-yellow-200 dark:border-yellow-800/50">
                                     <span className="opacity-75">
-                                      AI detectó:
+                                      Regex detectó:
                                     </span>{" "}
                                     <span className="font-mono font-medium">
-                                      {page.pagina_protocolo || "Nada"}
+                                      {paginasNumeroProtocolo[idx]
+                                        ?.pagina_protocolo || "No detectado"}
                                     </span>
                                   </div>
-                                )}
+                                </div>
                               </div>
-                            </div>
-                          )}
+                            )}
                         </div>
                       );
                     })}
