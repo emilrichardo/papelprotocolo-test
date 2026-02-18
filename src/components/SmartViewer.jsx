@@ -63,6 +63,11 @@ export function SmartViewer({
     return Array.isArray(raw) ? raw : [];
   }, [info]);
 
+  const paginasNumeroProtocolo = React.useMemo(() => {
+    const raw = info.paginas_numero_protocolo || [];
+    return Array.isArray(raw) ? raw : [];
+  }, [info]);
+
   // Robust comparecientes extraction
   const comparecientes = React.useMemo(() => {
     const raw =
@@ -840,7 +845,7 @@ export function SmartViewer({
                       return (
                         <div
                           key={page.pagina || idx}
-                          className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-sm relative flex items-center justify-between p-4"
+                          className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-sm relative flex flex-col p-4"
                         >
                           <div className="flex items-center gap-4">
                             <div className="relative shrink-0">
@@ -873,6 +878,46 @@ export function SmartViewer({
                               </div>
                             </div>
                           </div>
+                          {/* Regex Protocol Comparison Alert */}
+                          {paginasNumeroProtocolo[idx] && (
+                            <div
+                              className={cn(
+                                "mt-3 mx-4 mb-4 p-2.5 rounded-md text-xs border flex items-start gap-2",
+                                paginasNumeroProtocolo[idx]
+                                  ?.pagina_protocolo === page.pagina_protocolo
+                                  ? "bg-green-50 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800"
+                                  : "bg-yellow-50 text-yellow-800 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-800",
+                              )}
+                            >
+                              {paginasNumeroProtocolo[idx]?.pagina_protocolo ===
+                              page.pagina_protocolo ? (
+                                <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                              ) : (
+                                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                              )}
+                              <div className="flex flex-col gap-1">
+                                <span className="font-semibold">
+                                  Verificación Regex:
+                                </span>
+                                <div className="font-mono">
+                                  {paginasNumeroProtocolo[idx]
+                                    ?.pagina_protocolo || "No detectado"}
+                                </div>
+                                {paginasNumeroProtocolo[idx]
+                                  ?.pagina_protocolo !==
+                                  page.pagina_protocolo && (
+                                  <div className="mt-1 pt-1 border-t border-yellow-200 dark:border-yellow-800/50">
+                                    <span className="opacity-75">
+                                      AI detectó:
+                                    </span>{" "}
+                                    <span className="font-mono font-medium">
+                                      {page.pagina_protocolo || "Nada"}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
